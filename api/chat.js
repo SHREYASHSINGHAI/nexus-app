@@ -9,51 +9,50 @@ export default async function handler(req, res) {
   try {
     const { messages, system, max_tokens } = req.body;
 
-    const geminiMessages = [];
+    // Build Groq messages array
+    const groqMessages = [];
 
+    // Add system prompt if present
     if (system) {
-      geminiMessages.push({
-        role: 'user',
-        parts: [{ text: `SYSTEM INSTRUCTIONS:\n\n${system}` }]
-      });
-      geminiMessages.push({
-        role: 'model',
-        parts: [{ text: 'Understood. I will follow these instructions exactly.' }]
+      groqMessages.push({
+        role: 'system',
+        content: system
       });
     }
 
+    // Add conversation messages
     for (const m of messages) {
-      geminiMessages.push({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }]
+      groqMessages.push({
+        role: m.role,
+        content: m.content
       });
     }
 
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: geminiMessages,
-          generationConfig: {
-            maxOutputTokens: max_tokens || 8000,
-            temperature: 1,
-            topP: 0.95,
-            topK: 64
-          }
-        })
-      }
-    );
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: groqMessages,
+        max_tokens: max_tokens || 8000,
+        temperature: 0.7,
+        top_p: 0.9
+      })
+    });
 
-    const data = await geminiRes.json();
+    const data = await groqRes.json();
 
-    if (!geminiRes.ok) {
-      return res.status(geminiRes.status).json({ error: 'Gemini error', details: data });
+    if (!groqRes.ok) {
+      return res.status(groqRes.status).json({ error: 'Groq error', details: data });
     }
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // Extract text from Groq response
+    const text = data.choices?.[0]?.message?.content || '';
 
+    // Return in Anthropic format so index.html works unchanged
     return res.status(200).json({
       content: [{ type: 'text', text }]
     });
