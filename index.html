@@ -4,64 +4,65 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NEXUS — AI Tool Intelligence</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Courier+Prime:wght@400;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
- :root {
-      --bg: #0a0a0f;
-      --surface: #111118;
-      --surface2: #1a1a24;
-      --border: #2a2a3a;
-      --accent: #7c5cfc;
-      --accent2: #00d4aa;
-      --accent3: #ff6b6b;
-      --text: #e8e8f0;
-      --muted: #6b6b80;
-      --highlight: #f0e6ff;
-    }
-  
-    body.light-mode {
-      --bg: #f5f5f0;
-      --surface: #ffffff;
-      --surface2: #ededea;
-      --border: #d0d0c8;
-      --accent: #6b4df0;
-      --accent2: #00a886;
-      --accent3: #e05555;
-      --text: #1a1a2e;
-      --muted: #6b6b80;
-      --highlight: #2a1a5e;
-    }
-  
-    body.light-mode body::before {
-      background: radial-gradient(ellipse, rgba(107,77,240,0.06) 0%, transparent 70%);
-    }
-  
-    body.light-mode .msg-content.ai-msg {
-      background: #ffffff;
-      border-color: #d0d0c8;
-    }
-  
-    body.light-mode header {
-      background: rgba(245,245,240,0.9);
-    }
+  /* ── THEME VARIABLES ─────────────────────────────────────── */
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #7c5cfc;
+    --accent2: #00d4aa;
+    --accent3: #ff6b6b;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --highlight: #f0e6ff;
+  }
 
+  body.light-mode {
+    --bg: #f5f5f0;
+    --surface: #ffffff;
+    --surface2: #ededea;
+    --border: #d0d0c8;
+    --accent: #6b4df0;
+    --accent2: #00a886;
+    --accent3: #e05555;
+    --text: #1a1a2e;
+    --muted: #6b6b80;
+    --highlight: #2a1a5e;
+  }
+
+  body.light-mode header {
+    background: rgba(245,245,240,0.92);
+  }
+
+  body.light-mode .msg-content.ai-msg {
+    background: #ffffff;
+    border-color: #d0d0c8;
+  }
+
+  body.light-mode .input-area {
+    background: rgba(245,245,240,0.8);
+  }
+
+  /* ── RESET & BASE ────────────────────────────────────────── */
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Times New Roman', Times, serif;
+    font-family: 'JetBrains Mono', monospace;
     min-height: 100vh;
     overflow-x: hidden;
+    transition: background 0.3s, color 0.3s;
   }
 
   body::before {
     content: '';
     position: fixed;
-    top: -40%;
-    left: -20%;
-    width: 70%;
-    height: 70%;
+    top: -40%; left: -20%;
+    width: 70%; height: 70%;
     background: radial-gradient(ellipse, rgba(124,92,252,0.08) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
@@ -69,15 +70,14 @@
   body::after {
     content: '';
     position: fixed;
-    bottom: -30%;
-    right: -10%;
-    width: 60%;
-    height: 60%;
+    bottom: -30%; right: -10%;
+    width: 60%; height: 60%;
     background: radial-gradient(ellipse, rgba(0,212,170,0.06) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
   }
 
+  /* ── HEADER ──────────────────────────────────────────────── */
   header {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -89,10 +89,11 @@
     border-bottom: 1px solid var(--border);
     background: rgba(10,10,15,0.85);
     backdrop-filter: blur(20px);
+    transition: background 0.3s;
   }
 
   .logo {
-    font-family: 'Times New Roman', Times, serif;
+    font-family: 'Syne', sans-serif;
     font-weight: 800;
     font-size: 1.3rem;
     letter-spacing: 0.15em;
@@ -121,6 +122,47 @@
     text-transform: uppercase;
   }
 
+  .header-controls {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+  }
+
+  .theme-toggle-btn {
+    font-size: 1rem;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+  .theme-toggle-btn:hover {
+    border-color: var(--accent);
+    background: rgba(124,92,252,0.1);
+    transform: rotate(20deg);
+  }
+
+  .reset-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .reset-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  /* ── LAYOUT ──────────────────────────────────────────────── */
   .app-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -130,6 +172,7 @@
     z-index: 1;
   }
 
+  /* ── CHAT PANEL ──────────────────────────────────────────── */
   .chat-panel {
     display: flex;
     flex-direction: column;
@@ -243,6 +286,7 @@
     color: var(--highlight);
   }
 
+  /* ── OPTION BUTTONS ──────────────────────────────────────── */
   .options-grid {
     display: flex;
     flex-wrap: wrap;
@@ -275,6 +319,36 @@
     background: rgba(0,212,170,0.08);
   }
 
+  .other-btn { border-color: rgba(124,92,252,0.35) !important; color: var(--accent) !important; }
+
+  .other-input-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; align-items: center; }
+  .other-text-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: 7px;
+    padding: 0.45rem 0.8rem;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    outline: none;
+  }
+  .other-text-input::placeholder { color: var(--muted); }
+  .other-send-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 7px;
+    color: white;
+    font-size: 0.9rem;
+    width: 32px; height: 32px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .other-send-btn:hover { background: #9b7afe; }
+
+  /* ── INPUT AREA ──────────────────────────────────────────── */
   .input-area {
     padding: 1.2rem 2rem;
     border-top: 1px solid var(--border);
@@ -324,6 +398,7 @@
   .send-btn:active { transform: scale(0.97); }
   .send-btn svg { width: 16px; height: 16px; color: white; }
 
+  /* ── RESULTS PANEL ───────────────────────────────────────── */
   .results-panel {
     height: calc(100vh - 65px);
     overflow-y: auto;
@@ -351,6 +426,74 @@
     background: var(--border);
   }
 
+  /* ── EMPTY STATE ─────────────────────────────────────────── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    gap: 1rem;
+    padding: 3rem;
+  }
+
+  .empty-icon { font-size: 3rem; opacity: 0.3; }
+  .empty-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  .empty-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    opacity: 0.6;
+    line-height: 1.7;
+    max-width: 280px;
+  }
+
+  /* ── TYPING INDICATOR ────────────────────────────────────── */
+  .typing {
+    display: flex;
+    gap: 4px;
+    padding: 0.6rem 0.8rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0 12px 12px 12px;
+    width: fit-content;
+  }
+
+  .typing span {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes blink {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+
+  /* ── BULLET FORMATTING ───────────────────────────────────── */
+  .bullet-item {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin-bottom: 0.45rem;
+    font-size: 0.83rem;
+    line-height: 1.55;
+  }
+  .bullet-dot { color: var(--accent2); font-size: 0.65rem; margin-top: 0.25rem; flex-shrink: 0; }
+  .bullet-plain { font-size: 0.83rem; line-height: 1.55; margin-bottom: 0.3rem; color: var(--muted); }
+
+  /* ── TOOL CARD ───────────────────────────────────────────── */
   .tool-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -364,9 +507,18 @@
   }
 
   .tool-card:hover { border-color: rgba(124,92,252,0.4); }
+  .tool-card.top-pick { border-color: rgba(124,92,252,0.35); position: relative; }
 
   @keyframes cardIn {
     to { opacity: 1; transform: translateY(0); }
+  }
+
+  .highlight-rank {
+    position: absolute;
+    top: -1px; left: -1px; right: -1px;
+    height: 3px;
+    border-radius: 16px 16px 0 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
   }
 
   .tool-card-header {
@@ -387,6 +539,18 @@
   }
 
   .tool-meta { flex: 1; }
+
+  .top-pick-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
 
   .tool-name {
     font-family: 'Syne', sans-serif;
@@ -445,6 +609,22 @@
     color: #9999b0;
   }
 
+  /* ── TRADEOFF ────────────────────────────────────────────── */
+  .tradeoff-row {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    padding: 0.6rem 1.6rem 0.8rem;
+    background: rgba(255,107,107,0.04);
+    border-top: 1px dashed rgba(255,107,107,0.18);
+    border-bottom: 1px dashed rgba(255,107,107,0.18);
+    margin: 0 0 0.2rem;
+  }
+  .tradeoff-icon { font-size: 0.75rem; color: #ff9999; margin-top: 2px; flex-shrink: 0; }
+  .tradeoff-text { font-size: 0.75rem; line-height: 1.55; color: #bb9999; }
+  .tradeoff-text strong { color: #ff9999; font-weight: 600; }
+
+  /* ── GUIDE SECTION ───────────────────────────────────────── */
   .guide-section {
     border-top: 1px solid var(--border);
     padding: 1rem 1.6rem 1.4rem;
@@ -519,112 +699,7 @@
 
   .tool-link:hover { background: rgba(124,92,252,0.1); border-color: var(--accent); }
 
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    text-align: center;
-    gap: 1rem;
-    padding: 3rem;
-  }
-
-  .empty-icon { font-size: 3rem; opacity: 0.3; }
-  .empty-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 1rem;
-    color: var(--muted);
-    font-weight: 600;
-    letter-spacing: 0.05em;
-  }
-
-  .empty-sub {
-    font-size: 0.75rem;
-    color: var(--muted);
-    opacity: 0.6;
-    line-height: 1.7;
-    max-width: 280px;
-  }
-
-  .typing {
-    display: flex;
-    gap: 4px;
-    padding: 0.6rem 0.8rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0 12px 12px 12px;
-    width: fit-content;
-  }
-
-  .typing span {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: var(--muted);
-    animation: blink 1.2s ease-in-out infinite;
-  }
-
-  .typing span:nth-child(2) { animation-delay: 0.2s; }
-  .typing span:nth-child(3) { animation-delay: 0.4s; }
-
-  @keyframes blink {
-    0%, 100% { opacity: 0.3; transform: scale(0.8); }
-    50% { opacity: 1; transform: scale(1.1); }
-  }
-
-  .bullet-item {
-    display: flex;
-    gap: 0.5rem;
-    align-items: flex-start;
-    margin-bottom: 0.45rem;
-    font-size: 0.83rem;
-    line-height: 1.55;
-  }
-  .bullet-dot { color: var(--accent2); font-size: 0.65rem; margin-top: 0.25rem; flex-shrink: 0; }
-  .bullet-plain { font-size: 0.83rem; line-height: 1.55; margin-bottom: 0.3rem; color: var(--muted); }
-
-  .other-input-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; align-items: center; }
-  .other-text-input {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--accent);
-    border-radius: 7px;
-    padding: 0.45rem 0.8rem;
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.78rem;
-    outline: none;
-  }
-  .other-text-input::placeholder { color: var(--muted); }
-  .other-send-btn {
-    background: var(--accent);
-    border: none;
-    border-radius: 7px;
-    color: white;
-    font-size: 0.9rem;
-    width: 32px; height: 32px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.2s;
-    flex-shrink: 0;
-  }
-  .other-send-btn:hover { background: #9b7afe; }
-  .other-btn { border-color: rgba(124,92,252,0.35) !important; color: var(--accent) !important; }
-
-  .tradeoff-row {
-    display: flex;
-    gap: 0.6rem;
-    align-items: flex-start;
-    padding: 0.6rem 1.6rem 0.8rem;
-    background: rgba(255,107,107,0.04);
-    border-top: 1px dashed rgba(255,107,107,0.18);
-    border-bottom: 1px dashed rgba(255,107,107,0.18);
-    margin: 0 0 0.2rem;
-  }
-  .tradeoff-icon { font-size: 0.75rem; color: #ff9999; margin-top: 2px; flex-shrink: 0; }
-  .tradeoff-text { font-size: 0.75rem; line-height: 1.55; color: #bb9999; }
-  .tradeoff-text strong { color: #ff9999; font-weight: 600; }
-
+  /* ── NEUTRALITY BANNER ───────────────────────────────────── */
   .neutrality-banner {
     display: flex;
     align-items: center;
@@ -641,6 +716,7 @@
   }
   .neutrality-banner .nb-icon { font-size: 0.9rem; flex-shrink: 0; }
 
+  /* ── PIPELINE STYLES ─────────────────────────────────────── */
   .pipeline-summary-banner {
     display: flex;
     align-items: flex-start;
@@ -782,7 +858,7 @@
   }
   .pn-guide-steps.visible { display: flex; }
 
-  .pipeline-connector { display: flex; flex-direction: column; align-items: center; padding: 0.3rem 0; position: relative; }
+  .pipeline-connector { display: flex; flex-direction: column; align-items: center; padding: 0.3rem 0; }
   .pc-line { width: 2px; height: 20px; background: linear-gradient(to bottom, var(--accent), var(--accent2)); border-radius: 2px; }
   .pc-arrow-head { font-size: 0.7rem; color: var(--accent2); line-height: 1; margin-top: -2px; }
   .pc-label { font-size: 0.6rem; letter-spacing: 0.08em; color: var(--muted); text-align: center; max-width: 160px; margin-top: 3px; font-style: italic; }
@@ -803,7 +879,9 @@
   .orch-icon { font-size: 1rem; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
   .orchestration-note strong { color: var(--accent); }
 
+  /* ── PROMPT SECTION ──────────────────────────────────────── */
   .prompt-section { border-top: 1px solid var(--border); }
+
   .prompt-section-toggle {
     display: flex;
     align-items: center;
@@ -859,6 +937,16 @@
   .prompt-copy-btn:hover { background: rgba(245,158,11,0.1); }
   .prompt-copy-btn.copied { color: var(--accent2); border-color: var(--accent2); }
 
+  .prompt-text {
+    padding: 0.75rem 0.9rem;
+    font-size: 0.75rem;
+    line-height: 1.7;
+    color: #d4c4a0;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
   .prompt-usage-hint {
     display: flex;
     align-items: center;
@@ -873,71 +961,7 @@
   .puh-icon { color: var(--accent); font-size: 0.8rem; flex-shrink: 0; }
   .prompt-usage-hint strong { color: var(--accent); }
 
-  .prompt-text {
-    padding: 0.75rem 0.9rem;
-    font-size: 0.75rem;
-    line-height: 1.7;
-    color: #d4c4a0;
-    font-family: 'JetBrains Mono', monospace;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
-  .action-steps-section {
-    margin-top: 1.5rem;
-    border: 1px solid rgba(0,212,170,0.2);
-    border-radius: 14px;
-    overflow: hidden;
-    background: rgba(0,212,170,0.02);
-  }
-  .action-steps-header {
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
-    padding: 1rem 1.4rem;
-    background: rgba(0,212,170,0.06);
-    border-bottom: 1px solid rgba(0,212,170,0.15);
-  }
-  .action-steps-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent2); }
-  .action-steps-subtitle { font-size: 0.68rem; color: var(--muted); margin-left: auto; }
-  .action-steps-list { padding: 0.8rem 1.4rem 1.2rem; display: flex; flex-direction: column; gap: 0; }
-  .action-step-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 0.75rem 0;
-    border-bottom: 1px dashed rgba(0,212,170,0.1);
-    position: relative;
-  }
-  .action-step-row:last-child { border-bottom: none; }
-  .action-step-num {
-    width: 26px; height: 26px;
-    border-radius: 50%;
-    background: rgba(0,212,170,0.12);
-    border: 1px solid rgba(0,212,170,0.35);
-    color: var(--accent2);
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 0.65rem;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-  .action-step-body { flex: 1; }
-  .action-step-action { font-size: 0.8rem; color: var(--text); line-height: 1.5; margin-bottom: 0.25rem; }
-  .action-step-meta { display: flex; gap: 0.6rem; align-items: center; }
-  .action-step-tool {
-    font-size: 0.6rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--accent);
-    background: rgba(124,92,252,0.1);
-    border: 1px solid rgba(124,92,252,0.25);
-    padding: 0.15rem 0.45rem;
-    border-radius: 4px;
-  }
-  .action-step-duration { font-size: 0.62rem; color: var(--muted); font-style: italic; }
-
+  /* ── INLINE PROMPT BLOCKS ────────────────────────────────── */
   .inline-prompt-block {
     margin: 0.55rem 0 0.35rem;
     border: 1px solid rgba(245,158,11,0.3);
@@ -995,87 +1019,94 @@
   }
   .ipb-instruction strong { color: var(--accent2); }
 
+  /* ── ACTION STEPS ────────────────────────────────────────── */
+  .action-steps-section {
+    margin-top: 1.5rem;
+    border: 1px solid rgba(0,212,170,0.2);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(0,212,170,0.02);
+  }
+  .action-steps-header {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 1rem 1.4rem;
+    background: rgba(0,212,170,0.06);
+    border-bottom: 1px solid rgba(0,212,170,0.15);
+  }
+  .action-steps-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent2); }
+  .action-steps-subtitle { font-size: 0.68rem; color: var(--muted); margin-left: auto; }
+  .action-steps-list { padding: 0.8rem 1.4rem 1.2rem; display: flex; flex-direction: column; gap: 0; }
+  .action-step-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px dashed rgba(0,212,170,0.1);
+  }
+  .action-step-row:last-child { border-bottom: none; }
+  .action-step-num {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: rgba(0,212,170,0.12);
+    border: 1px solid rgba(0,212,170,0.35);
+    color: var(--accent2);
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 0.65rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .action-step-body { flex: 1; }
+  .action-step-action { font-size: 0.8rem; color: var(--text); line-height: 1.5; margin-bottom: 0.25rem; }
+  .action-step-meta { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.3rem; }
+  .action-step-tool {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(124,92,252,0.1);
+    border: 1px solid rgba(124,92,252,0.25);
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+  }
+  .action-step-duration { font-size: 0.62rem; color: var(--muted); font-style: italic; }
+
+  /* ── SCROLLBAR ───────────────────────────────────────────── */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
+  /* ── RESPONSIVE ──────────────────────────────────────────── */
   @media (max-width: 900px) {
     .app-container { grid-template-columns: 1fr; }
     .chat-panel { height: 60vh; position: relative; top: 0; border-right: none; border-bottom: 1px solid var(--border); }
     .results-panel { height: auto; }
-  }
-
-  .reset-btn {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    padding: 0.3rem 0.7rem;
-    border-radius: 6px;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .theme-toggle-btn {
-    font-size: 1.1rem;
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s;
-  }
-  .theme-toggle-btn:hover {
-    border-color: var(--accent);
-    background: rgba(124,92,252,0.1);
-    transform: rotate(20deg);
-  }
-  .reset-btn:hover { border-color: var(--accent3); color: var(--accent3); }
-
-  .highlight-rank {
-    position: absolute;
-    top: -1px; left: -1px; right: -1px;
-    height: 3px;
-    border-radius: 16px 16px 0 0;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-  }
-
-  .tool-card.top-pick { border-color: rgba(124,92,252,0.35); position: relative; }
-
-  .top-pick-label {
-    font-size: 0.58rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--accent2);
-    font-weight: 700;
-    margin-bottom: 0.3rem;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
+    .header-tag { display: none; }
   }
 </style>
 </head>
 <body>
 
+<!-- ── HEADER ────────────────────────────────────────────────── -->
 <header>
   <div class="logo">
     <div class="logo-dot"></div>
     NEXUS
   </div>
   <div class="header-tag">AI Tool Intelligence System</div>
-  <div style="display:flex;gap:0.6rem;align-items:center;">
-  <button class="theme-toggle-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
-  <button class="reset-btn" onclick="resetApp()">↺ Reset</button>
-</div>
+  <div class="header-controls">
+    <button class="theme-toggle-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+    <button class="reset-btn" onclick="resetApp()">↺ Reset</button>
+  </div>
 </header>
 
+<!-- ── APP LAYOUT ────────────────────────────────────────────── -->
 <div class="app-container">
+
+  <!-- Chat Panel -->
   <div class="chat-panel">
     <div class="chat-header">
       <div><div class="chat-title">INTELLIGENCE INTERFACE</div></div>
@@ -1101,6 +1132,7 @@
     </div>
   </div>
 
+  <!-- Results Panel -->
   <div class="results-panel" id="resultsPanel">
     <div class="empty-state" id="emptyState">
       <div class="empty-icon">◈</div>
@@ -1108,6 +1140,7 @@
       <div class="empty-sub">Describe your task in the chat and NEXUS will identify the best AI tools for your specific needs.</div>
     </div>
   </div>
+
 </div>
 
 <script>
@@ -1116,370 +1149,45 @@
 // ============================================================
 const AI_TOOLS_DB = {
   writing: [
-    {
-      name: "Claude (Anthropic)", icon: "🤖", color: "#7c5cfc",
-      tagline: "Advanced reasoning, long-form writing, and nuanced analysis",
-      pricing: "Free / $20/mo Pro", type: "LLM",
-      url: "https://claude.ai",
-      description: "Best for complex writing tasks, document analysis, creative projects, and tasks requiring deep reasoning. Excels at maintaining context over very long documents.",
-      tradeoff: "Context window is generous but free tier has message limits; not ideal for high-volume automated writing.",
-      guide: [
-        { title: "Start a new chat", desc: "Go to <strong>claude.ai</strong> and click New Chat" },
-        { title: "Describe your goal", desc: "Be specific about your task — tone, audience, format, length" },
-        { title: "Iterate", desc: "Ask Claude to refine, expand, or change style as needed" },
-        { title: "Use Projects", desc: "Organize related work using Claude's <strong>Projects</strong> feature for persistent context" }
-      ]
-    },
-    {
-      name: "ChatGPT (OpenAI)", icon: "💬", color: "#10a37f",
-      tagline: "Versatile assistant with plugins and image generation",
-      pricing: "Free / $20/mo Plus", type: "LLM",
-      url: "https://chat.openai.com",
-      description: "Excellent general-purpose writing assistant with access to web browsing, DALL-E image generation, and a vast plugin ecosystem. Great for diverse, everyday tasks.",
-      tradeoff: "Can be verbose and sometimes overly hedged; free tier uses older GPT-3.5 which is noticeably weaker.",
-      guide: [
-        { title: "Sign up or log in", desc: "Visit <strong>chat.openai.com</strong> and create a free account" },
-        { title: "Pick a model", desc: "Use GPT-4o for best results; GPT-3.5 for faster, free responses" },
-        { title: "Use Custom GPTs", desc: "Explore the GPT Store for pre-built writing assistants" },
-        { title: "Enable browsing", desc: "Ask it to search the web for current facts and references" }
-      ]
-    },
-    {
-      name: "Jasper AI", icon: "✍️", color: "#ff6b35",
-      tagline: "Marketing-focused AI writing for teams",
-      pricing: "From $39/mo", type: "Writing Agent",
-      url: "https://jasper.ai",
-      description: "Purpose-built for marketing teams. Includes brand voice training, campaign workflows, SEO optimization, and 50+ templates for ads, blogs, emails, and social.",
-      tradeoff: "Expensive for solo users; underlying models are third-party LLMs, so quality isn't unique — you pay for workflow, not AI capability.",
-      guide: [
-        { title: "Set Brand Voice", desc: "Upload your brand guidelines to train Jasper on your <strong>tone and style</strong>" },
-        { title: "Choose a Template", desc: "Browse 50+ templates: blog posts, ads, product descriptions" },
-        { title: "Use Campaigns", desc: "Create multi-channel content from a single brief" },
-        { title: "Integrate Surfer", desc: "Connect Surfer SEO for keyword-optimized content" }
-      ]
-    },
-    {
-      name: "Notion AI", icon: "📝", color: "#555",
-      tagline: "Embedded writing intelligence inside your workspace",
-      pricing: "$8/mo add-on", type: "Workspace AI",
-      url: "https://notion.so",
-      description: "Seamlessly integrated into Notion for drafting, summarizing, and transforming notes. Best for teams already using Notion as their knowledge base.",
-      tradeoff: "Only useful if you already use Notion; AI quality lags behind dedicated writing tools.",
-      guide: [
-        { title: "Enable Notion AI", desc: "Add the AI add-on in <strong>Settings → Plans</strong>" },
-        { title: "Use Space Bar", desc: "Press Space in any page to open the AI command menu" },
-        { title: "Summarize pages", desc: "Highlight text and ask AI to summarize or rewrite it" },
-        { title: "Auto-fill databases", desc: "Let AI generate database properties like summaries and tags" }
-      ]
-    }
+    { name: "Claude (Anthropic)", icon: "🤖", color: "#7c5cfc", tagline: "Advanced reasoning, long-form writing, and nuanced analysis", pricing: "Free / $20/mo Pro", type: "LLM", url: "https://claude.ai", description: "Best for complex writing tasks, document analysis, creative projects, and tasks requiring deep reasoning. Excels at maintaining context over very long documents.", tradeoff: "Context window is generous but free tier has message limits; not ideal for high-volume automated writing.", guide: [ { title: "Start a new chat", desc: "Go to <strong>claude.ai</strong> and click New Chat" }, { title: "Describe your goal", desc: "Be specific about your task — tone, audience, format, length" }, { title: "Iterate", desc: "Ask Claude to refine, expand, or change style as needed" }, { title: "Use Projects", desc: "Organize related work using Claude's <strong>Projects</strong> feature for persistent context" } ] },
+    { name: "ChatGPT (OpenAI)", icon: "💬", color: "#10a37f", tagline: "Versatile assistant with plugins and image generation", pricing: "Free / $20/mo Plus", type: "LLM", url: "https://chat.openai.com", description: "Excellent general-purpose writing assistant with access to web browsing, DALL-E image generation, and a vast plugin ecosystem. Great for diverse, everyday tasks.", tradeoff: "Can be verbose and sometimes overly hedged; free tier uses older GPT-3.5 which is noticeably weaker.", guide: [ { title: "Sign up or log in", desc: "Visit <strong>chat.openai.com</strong> and create a free account" }, { title: "Pick a model", desc: "Use GPT-4o for best results; GPT-3.5 for faster, free responses" }, { title: "Use Custom GPTs", desc: "Explore the GPT Store for pre-built writing assistants" }, { title: "Enable browsing", desc: "Ask it to search the web for current facts and references" } ] },
+    { name: "Jasper AI", icon: "✍️", color: "#ff6b35", tagline: "Marketing-focused AI writing for teams", pricing: "From $39/mo", type: "Writing Agent", url: "https://jasper.ai", description: "Purpose-built for marketing teams. Includes brand voice training, campaign workflows, SEO optimization, and 50+ templates for ads, blogs, emails, and social.", tradeoff: "Expensive for solo users; underlying models are third-party LLMs, so quality isn't unique — you pay for workflow, not AI capability.", guide: [ { title: "Set Brand Voice", desc: "Upload your brand guidelines to train Jasper on your <strong>tone and style</strong>" }, { title: "Choose a Template", desc: "Browse 50+ templates: blog posts, ads, product descriptions" }, { title: "Use Campaigns", desc: "Create multi-channel content from a single brief" }, { title: "Integrate Surfer", desc: "Connect Surfer SEO for keyword-optimized content" } ] },
+    { name: "Notion AI", icon: "📝", color: "#555", tagline: "Embedded writing intelligence inside your workspace", pricing: "$8/mo add-on", type: "Workspace AI", url: "https://notion.so", description: "Seamlessly integrated into Notion for drafting, summarizing, and transforming notes. Best for teams already using Notion as their knowledge base.", tradeoff: "Only useful if you already use Notion; AI quality lags behind dedicated writing tools.", guide: [ { title: "Enable Notion AI", desc: "Add the AI add-on in <strong>Settings → Plans</strong>" }, { title: "Use Space Bar", desc: "Press Space in any page to open the AI command menu" }, { title: "Summarize pages", desc: "Highlight text and ask AI to summarize or rewrite it" }, { title: "Auto-fill databases", desc: "Let AI generate database properties like summaries and tags" } ] }
   ],
   coding: [
-    {
-      name: "GitHub Copilot", icon: "⚡", color: "#6e40c9",
-      tagline: "Real-time code completion inside your IDE",
-      pricing: "Free (limited) / $10/mo", type: "Code AI",
-      url: "https://github.com/features/copilot",
-      description: "The industry standard for AI code completion. Integrates directly into VS Code, JetBrains IDEs, Neovim, and more. Suggests entire functions based on context.",
-      tradeoff: "Completions can be confidently wrong; works at file level only — no full codebase understanding without paying for enterprise tier.",
-      guide: [
-        { title: "Install Extension", desc: "Search 'GitHub Copilot' in VS Code Extensions marketplace" },
-        { title: "Authenticate", desc: "Sign in with your <strong>GitHub account</strong> when prompted" },
-        { title: "Write Comments", desc: "Type a natural language comment and Copilot suggests code below" },
-        { title: "Tab to Accept", desc: "Press <strong>Tab</strong> to accept, or Alt+] to cycle suggestions" }
-      ]
-    },
-    {
-      name: "Cursor", icon: "🖱️", color: "#2563eb",
-      tagline: "AI-native code editor with full codebase context",
-      pricing: "Free / $20/mo Pro", type: "AI IDE",
-      url: "https://cursor.sh",
-      description: "A fork of VS Code with AI deeply embedded. Can understand and edit across your entire codebase, not just the current file. Excellent for large projects.",
-      tradeoff: "Requires local setup; free tier is limited; some extensions behave differently than in standard VS Code.",
-      guide: [
-        { title: "Download Cursor", desc: "Install from <strong>cursor.sh</strong> — it imports VS Code settings" },
-        { title: "Use Cmd+K", desc: "Highlight code and press Cmd+K to edit it with AI" },
-        { title: "Chat with Codebase", desc: "Press Cmd+L to open the AI chat with full repo context" },
-        { title: "Composer Mode", desc: "Use Composer for multi-file edits and feature generation" }
-      ]
-    },
-    {
-      name: "Replit AI", icon: "🔁", color: "#f76c2f",
-      tagline: "Build and deploy full apps from the browser",
-      pricing: "Free / $20/mo Core", type: "Cloud IDE",
-      url: "https://replit.com",
-      description: "Best for quick prototyping and deployment without local setup. AI helps write, debug, and deploy code entirely in the browser. Great for beginners.",
-      tradeoff: "Performance-limited for large projects; code runs on Replit servers — not suitable for proprietary or sensitive codebases.",
-      guide: [
-        { title: "Create a Repl", desc: "Go to <strong>replit.com</strong>, click Create and choose your language" },
-        { title: "Ask Ghostwriter", desc: "Click the AI icon or press Ctrl+I to open Ghostwriter" },
-        { title: "Describe the app", desc: "Type what you want to build and let AI scaffold it" },
-        { title: "Deploy instantly", desc: "Click Deploy to publish your app with a shareable URL" }
-      ]
-    },
-    {
-      name: "Codeium", icon: "🟢", color: "#09b6a2",
-      tagline: "Free AI code completion for every developer",
-      pricing: "Free / $12/mo Teams", type: "Code AI",
-      url: "https://codeium.com",
-      description: "The best truly free Copilot alternative. Works in 70+ languages and 40+ editors with no usage limits on the free tier. Excellent for students and solo developers.",
-      tradeoff: "Slightly less accurate than Copilot on complex completions; enterprise features require paid plan.",
-      guide: [
-        { title: "Install extension", desc: "Search 'Codeium' in your editor's extension marketplace" },
-        { title: "Create free account", desc: "Sign up at <strong>codeium.com</strong> and authenticate" },
-        { title: "Start coding", desc: "Completions appear automatically as you type" },
-        { title: "Use chat", desc: "Open Codeium Chat sidebar to ask questions about your code" }
-      ]
-    }
+    { name: "GitHub Copilot", icon: "⚡", color: "#6e40c9", tagline: "Real-time code completion inside your IDE", pricing: "Free (limited) / $10/mo", type: "Code AI", url: "https://github.com/features/copilot", description: "The industry standard for AI code completion. Integrates directly into VS Code, JetBrains IDEs, Neovim, and more. Suggests entire functions based on context.", tradeoff: "Completions can be confidently wrong; works at file level only — no full codebase understanding without paying for enterprise tier.", guide: [ { title: "Install Extension", desc: "Search 'GitHub Copilot' in VS Code Extensions marketplace" }, { title: "Authenticate", desc: "Sign in with your <strong>GitHub account</strong> when prompted" }, { title: "Write Comments", desc: "Type a natural language comment and Copilot suggests code below" }, { title: "Tab to Accept", desc: "Press <strong>Tab</strong> to accept, or Alt+] to cycle suggestions" } ] },
+    { name: "Cursor", icon: "🖱️", color: "#2563eb", tagline: "AI-native code editor with full codebase context", pricing: "Free / $20/mo Pro", type: "AI IDE", url: "https://cursor.sh", description: "A fork of VS Code with AI deeply embedded. Can understand and edit across your entire codebase, not just the current file. Excellent for large projects.", tradeoff: "Requires local setup; free tier is limited; some extensions behave differently than in standard VS Code.", guide: [ { title: "Download Cursor", desc: "Install from <strong>cursor.sh</strong> — it imports VS Code settings" }, { title: "Use Cmd+K", desc: "Highlight code and press Cmd+K to edit it with AI" }, { title: "Chat with Codebase", desc: "Press Cmd+L to open the AI chat with full repo context" }, { title: "Composer Mode", desc: "Use Composer for multi-file edits and feature generation" } ] },
+    { name: "Replit AI", icon: "🔁", color: "#f76c2f", tagline: "Build and deploy full apps from the browser", pricing: "Free / $20/mo Core", type: "Cloud IDE", url: "https://replit.com", description: "Best for quick prototyping and deployment without local setup. AI helps write, debug, and deploy code entirely in the browser. Great for beginners.", tradeoff: "Performance-limited for large projects; code runs on Replit servers — not suitable for proprietary or sensitive codebases.", guide: [ { title: "Create a Repl", desc: "Go to <strong>replit.com</strong>, click Create and choose your language" }, { title: "Ask Ghostwriter", desc: "Click the AI icon or press Ctrl+I to open Ghostwriter" }, { title: "Describe the app", desc: "Type what you want to build and let AI scaffold it" }, { title: "Deploy instantly", desc: "Click Deploy to publish your app with a shareable URL" } ] },
+    { name: "Codeium", icon: "🟢", color: "#09b6a2", tagline: "Free AI code completion for every developer", pricing: "Free / $12/mo Teams", type: "Code AI", url: "https://codeium.com", description: "The best truly free Copilot alternative. Works in 70+ languages and 40+ editors with no usage limits on the free tier. Excellent for students and solo developers.", tradeoff: "Slightly less accurate than Copilot on complex completions; enterprise features require paid plan.", guide: [ { title: "Install extension", desc: "Search 'Codeium' in your editor's extension marketplace" }, { title: "Create free account", desc: "Sign up at <strong>codeium.com</strong> and authenticate" }, { title: "Start coding", desc: "Completions appear automatically as you type" }, { title: "Use chat", desc: "Open Codeium Chat sidebar to ask questions about your code" } ] }
   ],
   image: [
-    {
-      name: "Midjourney", icon: "🎨", color: "#2563eb",
-      tagline: "World-class aesthetic image generation",
-      pricing: "From $10/mo", type: "Image AI",
-      url: "https://midjourney.com",
-      description: "The gold standard for artistic image generation. Exceptional for concept art, illustrations, and aesthetic photography. Requires Discord but produces stunning results.",
-      tradeoff: "No free tier; requires Discord; limited control over exact composition; not ideal for precise product or text-heavy images.",
-      guide: [
-        { title: "Join Discord", desc: "Go to <strong>midjourney.com</strong> and click Join the Beta" },
-        { title: "Use /imagine", desc: "Type /imagine followed by your prompt in any Midjourney channel" },
-        { title: "Add parameters", desc: "Append --ar 16:9 for widescreen, --style raw for photorealism" },
-        { title: "Upscale & vary", desc: "Click U1-U4 to upscale or V1-V4 to create variations" }
-      ]
-    },
-    {
-      name: "DALL-E 3 (OpenAI)", icon: "🖼️", color: "#10a37f",
-      tagline: "Text-accurate image generation integrated with ChatGPT",
-      pricing: "Included in ChatGPT Plus", type: "Image AI",
-      url: "https://chat.openai.com",
-      description: "Best for images requiring accurate text rendering and precise prompt following. Accessible directly in ChatGPT without needing a separate account.",
-      tradeoff: "Artistic style is generic compared to Midjourney; limited resolution and no fine-tuning options.",
-      guide: [
-        { title: "Open ChatGPT", desc: "Visit <strong>chat.openai.com</strong> with a Plus subscription" },
-        { title: "Describe your image", desc: "Simply type 'Generate an image of...' in the chat" },
-        { title: "Iterate with chat", desc: "Ask ChatGPT to modify, add elements, or change style naturally" },
-        { title: "Right-click to save", desc: "Hover over the image and download in full resolution" }
-      ]
-    },
-    {
-      name: "Stable Diffusion (Auto1111)", icon: "⚙️", color: "#8b5cf6",
-      tagline: "Open-source powerhouse with unlimited customization",
-      pricing: "Free (self-hosted)", type: "Open Source",
-      url: "https://github.com/AUTOMATIC1111/stable-diffusion-webui",
-      description: "The ultimate control for those comfortable with technical setup. Runs locally, completely free, with thousands of community models and fine-tuning support.",
-      tradeoff: "Requires a capable GPU and technical setup; quality depends on which model you choose; steep learning curve for beginners.",
-      guide: [
-        { title: "Install Python", desc: "Ensure Python 3.10+ is installed on your system" },
-        { title: "Clone the repo", desc: "Run: git clone the AUTOMATIC1111 GitHub repository" },
-        { title: "Run webui.sh", desc: "Execute <strong>./webui.sh</strong> and open localhost:7860" },
-        { title: "Download models", desc: "Get models from Civitai.com and place in models/Stable-diffusion folder" }
-      ]
-    },
-    {
-      name: "Adobe Firefly", icon: "🔥", color: "#ff4444",
-      tagline: "Commercially safe AI images inside Adobe tools",
-      pricing: "Included in Adobe CC / Free tier", type: "Creative AI",
-      url: "https://firefly.adobe.com",
-      description: "Trained on licensed content, making it commercially safe. Integrates with Photoshop and Illustrator for generative fill, text effects, and vector generation.",
-      tradeoff: "Output quality and creative range lags behind Midjourney; best value only if you already pay for Adobe CC.",
-      guide: [
-        { title: "Visit firefly.adobe.com", desc: "Create a free Adobe account to access Firefly" },
-        { title: "Generate images", desc: "Use the <strong>Text to Image</strong> feature with your prompt" },
-        { title: "Generative Fill", desc: "In Photoshop, select an area and press Generate Fill" },
-        { title: "Style matching", desc: "Upload a reference image to match its style in new generations" }
-      ]
-    }
+    { name: "Midjourney", icon: "🎨", color: "#2563eb", tagline: "World-class aesthetic image generation", pricing: "From $10/mo", type: "Image AI", url: "https://midjourney.com", description: "The gold standard for artistic image generation. Exceptional for concept art, illustrations, and aesthetic photography.", tradeoff: "No free tier; requires Discord; limited control over exact composition; not ideal for precise product or text-heavy images.", guide: [ { title: "Join Discord", desc: "Go to <strong>midjourney.com</strong> and click Join the Beta" }, { title: "Use /imagine", desc: "Type /imagine followed by your prompt in any Midjourney channel" }, { title: "Add parameters", desc: "Append --ar 16:9 for widescreen, --style raw for photorealism" }, { title: "Upscale & vary", desc: "Click U1-U4 to upscale or V1-V4 to create variations" } ] },
+    { name: "DALL-E 3 (OpenAI)", icon: "🖼️", color: "#10a37f", tagline: "Text-accurate image generation integrated with ChatGPT", pricing: "Included in ChatGPT Plus", type: "Image AI", url: "https://chat.openai.com", description: "Best for images requiring accurate text rendering and precise prompt following. Accessible directly in ChatGPT without needing a separate account.", tradeoff: "Artistic style is generic compared to Midjourney; limited resolution and no fine-tuning options.", guide: [ { title: "Open ChatGPT", desc: "Visit <strong>chat.openai.com</strong> with a Plus subscription" }, { title: "Describe your image", desc: "Simply type 'Generate an image of...' in the chat" }, { title: "Iterate with chat", desc: "Ask ChatGPT to modify, add elements, or change style naturally" }, { title: "Right-click to save", desc: "Hover over the image and download in full resolution" } ] },
+    { name: "Stable Diffusion (Auto1111)", icon: "⚙️", color: "#8b5cf6", tagline: "Open-source powerhouse with unlimited customization", pricing: "Free (self-hosted)", type: "Open Source", url: "https://github.com/AUTOMATIC1111/stable-diffusion-webui", description: "The ultimate control for those comfortable with technical setup. Runs locally, completely free, with thousands of community models and fine-tuning support.", tradeoff: "Requires a capable GPU and technical setup; steep learning curve for beginners.", guide: [ { title: "Install Python", desc: "Ensure Python 3.10+ is installed on your system" }, { title: "Clone the repo", desc: "Run: git clone the AUTOMATIC1111 GitHub repository" }, { title: "Run webui.sh", desc: "Execute <strong>./webui.sh</strong> and open localhost:7860" }, { title: "Download models", desc: "Get models from Civitai.com and place in models/Stable-diffusion folder" } ] },
+    { name: "Adobe Firefly", icon: "🔥", color: "#ff4444", tagline: "Commercially safe AI images inside Adobe tools", pricing: "Included in Adobe CC / Free tier", type: "Creative AI", url: "https://firefly.adobe.com", description: "Trained on licensed content, making it commercially safe. Integrates with Photoshop and Illustrator for generative fill, text effects, and vector generation.", tradeoff: "Output quality and creative range lags behind Midjourney; best value only if you already pay for Adobe CC.", guide: [ { title: "Visit firefly.adobe.com", desc: "Create a free Adobe account to access Firefly" }, { title: "Generate images", desc: "Use the <strong>Text to Image</strong> feature with your prompt" }, { title: "Generative Fill", desc: "In Photoshop, select an area and press Generate Fill" }, { title: "Style matching", desc: "Upload a reference image to match its style in new generations" } ] }
   ],
   research: [
-    {
-      name: "Perplexity AI", icon: "🔍", color: "#2563eb",
-      tagline: "Real-time AI search with cited sources",
-      pricing: "Free / $20/mo Pro", type: "Search AI",
-      url: "https://perplexity.ai",
-      description: "The best AI for research requiring current information. Searches the web in real-time and provides answers with full citations. Think Google + ChatGPT combined.",
-      tradeoff: "Can still hallucinate when sources are thin; not suited for private document analysis; Pro required for advanced model access.",
-      guide: [
-        { title: "Go to perplexity.ai", desc: "No account needed for basic use; sign up for history" },
-        { title: "Ask your question", desc: "Type any research question in natural language" },
-        { title: "Check sources", desc: "Click the numbered citations to verify each claim's source" },
-        { title: "Use Focus modes", desc: "Select Academic, YouTube, or Reddit for specialized searches" }
-      ]
-    },
-    {
-      name: "Elicit", icon: "📚", color: "#6b7280",
-      tagline: "AI research assistant for academic literature",
-      pricing: "Free (limited) / $10/mo", type: "Research AI",
-      url: "https://elicit.com",
-      description: "Purpose-built for academic research. Automatically finds relevant papers, extracts key data, and synthesizes findings. Essential for literature reviews.",
-      tradeoff: "Limited to academic papers; not useful for web research, news, or general knowledge tasks.",
-      guide: [
-        { title: "Create an account", desc: "Sign up at <strong>elicit.com</strong> for research access" },
-        { title: "Ask a research question", desc: "Enter your hypothesis or topic as a research question" },
-        { title: "Review papers", desc: "Elicit finds relevant papers and extracts key findings" },
-        { title: "Build your table", desc: "Add columns for the data points you need across all papers" }
-      ]
-    },
-    {
-      name: "NotebookLM (Google)", icon: "📓", color: "#4285f4",
-      tagline: "AI that reasons over YOUR documents",
-      pricing: "Free", type: "Document AI",
-      url: "https://notebooklm.google",
-      description: "Upload your own PDFs, documents, and notes. NotebookLM becomes an expert on YOUR sources only, with zero hallucination from outside data.",
-      tradeoff: "Only knows what you upload — cannot answer questions beyond your provided sources; limited to 50 sources per notebook.",
-      guide: [
-        { title: "Go to notebooklm.google", desc: "Sign in with a Google account and create a Notebook" },
-        { title: "Upload sources", desc: "Add PDFs, Google Docs, YouTube links, or paste text" },
-        { title: "Ask questions", desc: "Chat with your documents — all answers cite your sources" },
-        { title: "Generate summaries", desc: "Use the Study Guide feature to create overviews and briefings" }
-      ]
-    }
+    { name: "Perplexity AI", icon: "🔍", color: "#2563eb", tagline: "Real-time AI search with cited sources", pricing: "Free / $20/mo Pro", type: "Search AI", url: "https://perplexity.ai", description: "The best AI for research requiring current information. Searches the web in real-time and provides answers with full citations.", tradeoff: "Can still hallucinate when sources are thin; not suited for private document analysis.", guide: [ { title: "Go to perplexity.ai", desc: "No account needed for basic use; sign up for history" }, { title: "Ask your question", desc: "Type any research question in natural language" }, { title: "Check sources", desc: "Click the numbered citations to verify each claim's source" }, { title: "Use Focus modes", desc: "Select Academic, YouTube, or Reddit for specialized searches" } ] },
+    { name: "Elicit", icon: "📚", color: "#6b7280", tagline: "AI research assistant for academic literature", pricing: "Free (limited) / $10/mo", type: "Research AI", url: "https://elicit.com", description: "Purpose-built for academic research. Automatically finds relevant papers, extracts key data, and synthesizes findings.", tradeoff: "Limited to academic papers; not useful for web research, news, or general knowledge tasks.", guide: [ { title: "Create an account", desc: "Sign up at <strong>elicit.com</strong> for research access" }, { title: "Ask a research question", desc: "Enter your hypothesis or topic as a research question" }, { title: "Review papers", desc: "Elicit finds relevant papers and extracts key findings" }, { title: "Build your table", desc: "Add columns for the data points you need across all papers" } ] },
+    { name: "NotebookLM (Google)", icon: "📓", color: "#4285f4", tagline: "AI that reasons over YOUR documents", pricing: "Free", type: "Document AI", url: "https://notebooklm.google", description: "Upload your own PDFs, documents, and notes. NotebookLM becomes an expert on YOUR sources only, with zero hallucination from outside data.", tradeoff: "Only knows what you upload — cannot answer questions beyond your provided sources.", guide: [ { title: "Go to notebooklm.google", desc: "Sign in with a Google account and create a Notebook" }, { title: "Upload sources", desc: "Add PDFs, Google Docs, YouTube links, or paste text" }, { title: "Ask questions", desc: "Chat with your documents — all answers cite your sources" }, { title: "Generate summaries", desc: "Use the Study Guide feature to create overviews and briefings" } ] }
   ],
   voice: [
-    {
-      name: "ElevenLabs", icon: "🎙️", color: "#f59e0b",
-      tagline: "Ultra-realistic AI voice cloning and generation",
-      pricing: "Free / From $5/mo", type: "Voice AI",
-      url: "https://elevenlabs.io",
-      description: "Industry-leading voice AI for realistic text-to-speech, voice cloning with just a few seconds of audio, and multilingual voiceovers. Used by major studios.",
-      tradeoff: "Free tier is limited to 10,000 characters/month; voice cloning of real people raises ethical and legal concerns.",
-      guide: [
-        { title: "Sign up", desc: "Create account at <strong>elevenlabs.io</strong> for 10,000 free chars/mo" },
-        { title: "Pick a voice", desc: "Browse the Voice Library or design your own in VoiceLab" },
-        { title: "Paste your text", desc: "Enter your script in the Speech Synthesis editor" },
-        { title: "Adjust settings", desc: "Tune Stability and Clarity sliders for the perfect delivery" }
-      ]
-    },
-    {
-      name: "Suno AI", icon: "🎵", color: "#8b5cf6",
-      tagline: "Generate full songs with vocals from text prompts",
-      pricing: "Free / From $8/mo", type: "Music AI",
-      url: "https://suno.com",
-      description: "Create complete songs with lyrics, melody, and vocals from a simple text description. Supports any genre from pop to classical in seconds.",
-      tradeoff: "Limited control over exact musical structure; commercial licensing terms have been contested by music industry groups.",
-      guide: [
-        { title: "Go to suno.com", desc: "Sign in with Google or Discord account" },
-        { title: "Describe your song", desc: "Enter a song style description like 'upbeat pop song about coffee'" },
-        { title: "Write lyrics (optional)", desc: "Enable Custom Mode to write your own lyrics" },
-        { title: "Download & share", desc: "Download the MP3 or share directly to social media" }
-      ]
-    }
+    { name: "ElevenLabs", icon: "🎙️", color: "#f59e0b", tagline: "Ultra-realistic AI voice cloning and generation", pricing: "Free / From $5/mo", type: "Voice AI", url: "https://elevenlabs.io", description: "Industry-leading voice AI for realistic text-to-speech, voice cloning, and multilingual voiceovers. Used by major studios.", tradeoff: "Free tier is limited to 10,000 characters/month; voice cloning of real people raises ethical and legal concerns.", guide: [ { title: "Sign up", desc: "Create account at <strong>elevenlabs.io</strong> for 10,000 free chars/mo" }, { title: "Pick a voice", desc: "Browse the Voice Library or design your own in VoiceLab" }, { title: "Paste your text", desc: "Enter your script in the Speech Synthesis editor" }, { title: "Adjust settings", desc: "Tune Stability and Clarity sliders for the perfect delivery" } ] },
+    { name: "Suno AI", icon: "🎵", color: "#8b5cf6", tagline: "Generate full songs with vocals from text prompts", pricing: "Free / From $8/mo", type: "Music AI", url: "https://suno.com", description: "Create complete songs with lyrics, melody, and vocals from a simple text description. Supports any genre.", tradeoff: "Limited control over exact musical structure; commercial licensing terms have been contested by music industry groups.", guide: [ { title: "Go to suno.com", desc: "Sign in with Google or Discord account" }, { title: "Describe your song", desc: "Enter a song style description like 'upbeat pop song about coffee'" }, { title: "Write lyrics (optional)", desc: "Enable Custom Mode to write your own lyrics" }, { title: "Download & share", desc: "Download the MP3 or share directly to social media" } ] }
   ],
   video: [
-    {
-      name: "Runway ML", icon: "🎬", color: "#ec4899",
-      tagline: "Professional AI video generation and editing",
-      pricing: "Free (125 credits) / From $15/mo", type: "Video AI",
-      url: "https://runwayml.com",
-      description: "The professional choice for AI video. Offers Gen-3 text-to-video, image-to-video, video-to-video transformation, and advanced editing tools used by filmmakers.",
-      tradeoff: "Expensive per-credit for longer clips; free tier is very limited; videos max at 10-16 seconds.",
-      guide: [
-        { title: "Sign up at runwayml.com", desc: "Create account and get 125 free credits to start" },
-        { title: "Choose Gen-3", desc: "Select the Gen-3 Alpha model for best text-to-video results" },
-        { title: "Write your prompt", desc: "Describe camera movement, subject, and mood specifically" },
-        { title: "Extend clips", desc: "Use Video to Video to extend or transform existing footage" }
-      ]
-    },
-    {
-      name: "Sora (OpenAI)", icon: "☀️", color: "#f59e0b",
-      tagline: "Cinematic-quality video from text descriptions",
-      pricing: "Included in ChatGPT Plus/Pro", type: "Video AI",
-      url: "https://sora.com",
-      description: "OpenAI's flagship video model producing strikingly realistic and coherent video up to 20 seconds. Available to Plus subscribers with clear motion understanding.",
-      tradeoff: "Requires ChatGPT Plus/Pro subscription; limited to 20 seconds; content policy is restrictive for creative edge cases.",
-      guide: [
-        { title: "Access via ChatGPT", desc: "Visit <strong>sora.com</strong> with an active ChatGPT Plus subscription" },
-        { title: "Write a detailed prompt", desc: "Include lighting, camera angle, subject motion, and environment" },
-        { title: "Set duration", desc: "Choose 5-20 second clips depending on complexity" },
-        { title: "Remix & storyboard", desc: "Use the Storyboard feature to create multi-scene videos" }
-      ]
-    },
-    {
-      name: "HeyGen", icon: "🧑‍💼", color: "#2563eb",
-      tagline: "AI avatar video creation for business",
-      pricing: "Free (1 min) / From $24/mo", type: "Avatar AI",
-      url: "https://heygen.com",
-      description: "Create professional-grade videos with AI avatars. Perfect for corporate training, product demos, and multilingual content without cameras or studios.",
-      tradeoff: "Free tier gives only 1 minute; avatar videos can appear uncanny; not suitable for cinematic or artistic content.",
-      guide: [
-        { title: "Sign up at heygen.com", desc: "Create account — free tier includes 1 minute of video" },
-        { title: "Pick an avatar", desc: "Choose from 100+ realistic AI avatars or create your own" },
-        { title: "Write your script", desc: "Type or paste your script in the script editor" },
-        { title: "Translate & localize", desc: "Use Video Translation to dub into 40+ languages with lip-sync" }
-      ]
-    }
+    { name: "Runway ML", icon: "🎬", color: "#ec4899", tagline: "Professional AI video generation and editing", pricing: "Free (125 credits) / From $15/mo", type: "Video AI", url: "https://runwayml.com", description: "The professional choice for AI video. Offers Gen-3 text-to-video, image-to-video, video-to-video transformation.", tradeoff: "Expensive per-credit for longer clips; free tier is very limited; videos max at 10-16 seconds.", guide: [ { title: "Sign up at runwayml.com", desc: "Create account and get 125 free credits to start" }, { title: "Choose Gen-3", desc: "Select the Gen-3 Alpha model for best text-to-video results" }, { title: "Write your prompt", desc: "Describe camera movement, subject, and mood specifically" }, { title: "Extend clips", desc: "Use Video to Video to extend or transform existing footage" } ] },
+    { name: "Sora (OpenAI)", icon: "☀️", color: "#f59e0b", tagline: "Cinematic-quality video from text descriptions", pricing: "Included in ChatGPT Plus/Pro", type: "Video AI", url: "https://sora.com", description: "OpenAI's flagship video model producing strikingly realistic video up to 20 seconds.", tradeoff: "Requires ChatGPT Plus/Pro subscription; limited to 20 seconds; content policy is restrictive.", guide: [ { title: "Access via ChatGPT", desc: "Visit <strong>sora.com</strong> with an active ChatGPT Plus subscription" }, { title: "Write a detailed prompt", desc: "Include lighting, camera angle, subject motion, and environment" }, { title: "Set duration", desc: "Choose 5-20 second clips depending on complexity" }, { title: "Remix & storyboard", desc: "Use the Storyboard feature to create multi-scene videos" } ] },
+    { name: "HeyGen", icon: "🧑‍💼", color: "#2563eb", tagline: "AI avatar video creation for business", pricing: "Free (1 min) / From $24/mo", type: "Avatar AI", url: "https://heygen.com", description: "Create professional-grade videos with AI avatars. Perfect for corporate training, product demos, and multilingual content.", tradeoff: "Free tier gives only 1 minute; avatar videos can appear uncanny; not suitable for cinematic content.", guide: [ { title: "Sign up at heygen.com", desc: "Create account — free tier includes 1 minute of video" }, { title: "Pick an avatar", desc: "Choose from 100+ realistic AI avatars or create your own" }, { title: "Write your script", desc: "Type or paste your script in the script editor" }, { title: "Translate & localize", desc: "Use Video Translation to dub into 40+ languages with lip-sync" } ] }
   ],
   automation: [
-    {
-      name: "Make (Integromat)", icon: "🔗", color: "#6d28d9",
-      tagline: "Visual workflow automation with 1500+ app integrations",
-      pricing: "Free / From $9/mo", type: "Automation",
-      url: "https://make.com",
-      description: "Visual drag-and-drop automation builder connecting 1500+ apps. More powerful than Zapier for complex multi-step workflows with conditional logic and data transformation.",
-      tradeoff: "Steeper learning curve than Zapier; pricing can escalate with high operation volumes.",
-      guide: [
-        { title: "Create account at make.com", desc: "Free plan includes 1,000 operations/month" },
-        { title: "Create a Scenario", desc: "Click Create a Scenario and search for your trigger app" },
-        { title: "Add modules", desc: "Connect apps by clicking the + button to add action modules" },
-        { title: "Test & schedule", desc: "Run once to test, then set a schedule in Scenario Settings" }
-      ]
-    },
-    {
-      name: "n8n", icon: "🔄", color: "#ea4b71",
-      tagline: "Open-source automation with AI node support",
-      pricing: "Free (self-hosted) / From $20/mo cloud", type: "Open Source Automation",
-      url: "https://n8n.io",
-      description: "The developer-friendly automation platform with native AI agent capabilities. Self-hostable for maximum control. 400+ integrations with deep customization.",
-      tradeoff: "Requires server setup for self-hosting; less intuitive UI than Zapier or Make for non-developers.",
-      guide: [
-        { title: "Install n8n", desc: "Run: npx n8n or use Docker: docker run -it --rm n8nio/n8n" },
-        { title: "Build your workflow", desc: "Drag nodes from the left panel onto the canvas" },
-        { title: "Add AI nodes", desc: "Use OpenAI, Claude, or Ollama nodes for AI-powered steps" },
-        { title: "Activate", desc: "Toggle the workflow Active switch to run it on schedule or webhook" }
-      ]
-    },
-    {
-      name: "Zapier", icon: "⚡", color: "#ff4a00",
-      tagline: "The easiest app-to-app automation for non-developers",
-      pricing: "Free (5 Zaps) / From $19.99/mo", type: "Automation",
-      url: "https://zapier.com",
-      description: "The most user-friendly automation tool. Best for simple trigger-action workflows. The AI-powered Zap builder can create automations from natural language descriptions.",
-      tradeoff: "Expensive for multi-step or high-volume workflows; less flexible than Make or n8n for complex logic.",
-      guide: [
-        { title: "Go to zapier.com", desc: "Sign up — free plan includes 5 active Zaps" },
-        { title: "Click Make a Zap", desc: "Or describe your workflow in natural language to auto-build it" },
-        { title: "Set trigger", desc: "Choose the app and event that starts your automation" },
-        { title: "Add action", desc: "Pick what happens next, test it, and turn it on" }
-      ]
-    }
+    { name: "Make (Integromat)", icon: "🔗", color: "#6d28d9", tagline: "Visual workflow automation with 1500+ app integrations", pricing: "Free / From $9/mo", type: "Automation", url: "https://make.com", description: "Visual drag-and-drop automation builder connecting 1500+ apps. More powerful than Zapier for complex multi-step workflows.", tradeoff: "Steeper learning curve than Zapier; pricing can escalate with high operation volumes.", guide: [ { title: "Create account at make.com", desc: "Free plan includes 1,000 operations/month" }, { title: "Create a Scenario", desc: "Click Create a Scenario and search for your trigger app" }, { title: "Add modules", desc: "Connect apps by clicking the + button to add action modules" }, { title: "Test & schedule", desc: "Run once to test, then set a schedule in Scenario Settings" } ] },
+    { name: "n8n", icon: "🔄", color: "#ea4b71", tagline: "Open-source automation with AI node support", pricing: "Free (self-hosted) / From $20/mo cloud", type: "Open Source Automation", url: "https://n8n.io", description: "The developer-friendly automation platform with native AI agent capabilities. Self-hostable for maximum control.", tradeoff: "Requires server setup for self-hosting; less intuitive UI than Zapier or Make for non-developers.", guide: [ { title: "Install n8n", desc: "Run: npx n8n or use Docker: docker run -it --rm n8nio/n8n" }, { title: "Build your workflow", desc: "Drag nodes from the left panel onto the canvas" }, { title: "Add AI nodes", desc: "Use OpenAI, Claude, or Ollama nodes for AI-powered steps" }, { title: "Activate", desc: "Toggle the workflow Active switch to run it on schedule or webhook" } ] },
+    { name: "Zapier", icon: "⚡", color: "#ff4a00", tagline: "The easiest app-to-app automation for non-developers", pricing: "Free (5 Zaps) / From $19.99/mo", type: "Automation", url: "https://zapier.com", description: "The most user-friendly automation tool. Best for simple trigger-action workflows.", tradeoff: "Expensive for multi-step or high-volume workflows; less flexible than Make or n8n for complex logic.", guide: [ { title: "Go to zapier.com", desc: "Sign up — free plan includes 5 active Zaps" }, { title: "Click Make a Zap", desc: "Or describe your workflow in natural language to auto-build it" }, { title: "Set trigger", desc: "Choose the app and event that starts your automation" }, { title: "Add action", desc: "Pick what happens next, test it, and turn it on" } ] }
   ],
   data: [
-    {
-      name: "Julius AI", icon: "📊", color: "#10b981",
-      tagline: "Conversational data analysis and visualization",
-      pricing: "Free / From $20/mo", type: "Data AI",
-      url: "https://julius.ai",
-      description: "Upload CSVs, Excel files, or databases and analyze them through conversation. Creates charts, runs statistics, and explains insights without writing code.",
-      tradeoff: "Less powerful than writing actual Python; limited to supported file formats; not suited for real-time or streaming data.",
-      guide: [
-        { title: "Go to julius.ai", desc: "Sign in and click New Analysis" },
-        { title: "Upload your data", desc: "Drag and drop a CSV, Excel, or connect Google Sheets" },
-        { title: "Ask questions", desc: "Type 'What are the top 5 products by revenue?' in natural language" },
-        { title: "Generate charts", desc: "Ask for visualizations — 'Create a bar chart of monthly sales'" }
-      ]
-    },
-    {
-      name: "ChatGPT Advanced Data Analysis", icon: "🐍", color: "#10a37f",
-      tagline: "Code-executing data analysis inside ChatGPT",
-      pricing: "Included in ChatGPT Plus", type: "Data AI",
-      url: "https://chat.openai.com",
-      description: "ChatGPT Plus includes Advanced Data Analysis (formerly Code Interpreter) — upload files and let GPT-4 write and execute Python to analyze and visualize your data.",
-      tradeoff: "Session-based — code and files don't persist after the chat ends; requires ChatGPT Plus subscription.",
-      guide: [
-        { title: "Use ChatGPT Plus", desc: "Ensure you have a Plus subscription for this feature" },
-        { title: "Attach your file", desc: "Click the paperclip icon to upload CSV, Excel, or PDF" },
-        { title: "Ask for analysis", desc: "'Summarize this data and show trends over time'" },
-        { title: "Download outputs", desc: "Right-click charts or request code downloads for reuse" }
-      ]
-    }
+    { name: "Julius AI", icon: "📊", color: "#10b981", tagline: "Conversational data analysis and visualization", pricing: "Free / From $20/mo", type: "Data AI", url: "https://julius.ai", description: "Upload CSVs, Excel files, or databases and analyze them through conversation. Creates charts and explains insights without writing code.", tradeoff: "Less powerful than writing actual Python; limited to supported file formats; not suited for real-time data.", guide: [ { title: "Go to julius.ai", desc: "Sign in and click New Analysis" }, { title: "Upload your data", desc: "Drag and drop a CSV, Excel, or connect Google Sheets" }, { title: "Ask questions", desc: "Type 'What are the top 5 products by revenue?' in natural language" }, { title: "Generate charts", desc: "Ask for visualizations — 'Create a bar chart of monthly sales'" } ] },
+    { name: "ChatGPT Advanced Data Analysis", icon: "🐍", color: "#10a37f", tagline: "Code-executing data analysis inside ChatGPT", pricing: "Included in ChatGPT Plus", type: "Data AI", url: "https://chat.openai.com", description: "Upload files and let GPT-4 write and execute Python to analyze and visualize your data.", tradeoff: "Session-based — code and files don't persist after the chat ends; requires ChatGPT Plus subscription.", guide: [ { title: "Use ChatGPT Plus", desc: "Ensure you have a Plus subscription for this feature" }, { title: "Attach your file", desc: "Click the paperclip icon to upload CSV, Excel, or PDF" }, { title: "Ask for analysis", desc: "'Summarize this data and show trends over time'" }, { title: "Download outputs", desc: "Right-click charts or request code downloads for reuse" } ] }
   ]
 };
 
@@ -1536,16 +1244,8 @@ Analyse all requirements objectively. Output ONE of these two JSON formats:
     {
       "tool": "Best Tool",
       "prompts": [
-        {
-          "label": "Primary Task Prompt",
-          "purpose": "One sentence on what this prompt achieves",
-          "prompt": "The full optimised prompt text — specific, focused, no fluff. Use all context gathered from user. Include format requirements, constraints, tone, output structure. Make it immediately usable."
-        },
-        {
-          "label": "Refinement Prompt",
-          "purpose": "For iterating on the output",
-          "prompt": "A follow-up prompt to refine or improve the first output."
-        }
+        { "label": "Primary Task Prompt", "purpose": "One sentence on what this prompt achieves", "prompt": "The full optimised prompt text — specific, focused, no fluff. Use all context gathered from user." },
+        { "label": "Refinement Prompt", "purpose": "For iterating on the output", "prompt": "A follow-up prompt to refine or improve the first output." }
       ]
     }
   ],
@@ -1564,46 +1264,20 @@ Analyse all requirements objectively. Output ONE of these two JSON formats:
   "summary": "Short neutral summary of the full task",
   "pipeline": [
     {
-      "step": 1,
-      "subtask": "Short subtask name",
-      "description": "What needs to be done in this step",
-      "tool": "Exact Tool Name",
-      "output": "What this step produces",
-      "connects_to": 2,
-      "fit_score": 91,
+      "step": 1, "subtask": "Short subtask name", "description": "What needs to be done", "tool": "Exact Tool Name", "output": "What this step produces", "connects_to": 2, "fit_score": 91,
       "prompts": [
-        {
-          "label": "Primary Prompt",
-          "purpose": "What this prompt achieves for this subtask",
-          "prompt": "The full optimised, context-aware prompt. Be specific about the task, format, constraints, and expected output. Use all context from the user conversation. No generic filler — every word must serve a purpose."
-        },
-        {
-          "label": "Refinement Prompt",
-          "purpose": "To improve or iterate this step's output",
-          "prompt": "Context-aware follow-up prompt referencing the output of this step."
-        }
+        { "label": "Primary Prompt", "purpose": "What this prompt achieves", "prompt": "The full optimised context-aware prompt." },
+        { "label": "Refinement Prompt", "purpose": "To improve or iterate", "prompt": "Context-aware follow-up prompt." }
       ]
     },
     {
-      "step": 2,
-      "subtask": "Short subtask name",
-      "description": "What needs to be done",
-      "tool": "Exact Tool Name",
-      "output": "What this step produces",
-      "connects_to": null,
-      "fit_score": 87,
-      "prompts": [
-        {
-          "label": "Primary Prompt",
-          "purpose": "Purpose of this prompt for step 2",
-          "prompt": "Optimised prompt for step 2. Reference that input comes from step 1 output where relevant."
-        }
-      ]
+      "step": 2, "subtask": "Short subtask name", "description": "What needs to be done", "tool": "Exact Tool Name", "output": "What this step produces", "connects_to": null, "fit_score": 87,
+      "prompts": [ { "label": "Primary Prompt", "purpose": "Purpose for step 2", "prompt": "Optimised prompt referencing step 1 output where relevant." } ]
     }
   ],
   "action_steps": [
     { "step": 1, "action": "Open [Tool Name] → paste the prompt shown below into the input field → run it", "tool": "Tool Name", "duration": "~X min" },
-    { "step": 2, "action": "Copy the output from Step 1 → open [next Tool] → paste the prompt below and include the Step 1 output", "tool": "Tool Name", "duration": "~X min" },
+    { "step": 2, "action": "Copy the output from Step 1 → open [next Tool] → paste the prompt below", "tool": "Tool Name", "duration": "~X min" },
     { "step": 3, "action": "Final review → export or publish as needed", "tool": "Tool Name", "duration": "~X min" }
   ],
   "orchestration": "One sentence explaining how tools connect and data flows between them",
@@ -1611,7 +1285,7 @@ Analyse all requirements objectively. Output ONE of these two JSON formats:
 }
 |||JSON_END
 
-PROMPT QUALITY RULES (critical):
+PROMPT QUALITY RULES:
 - Every prompt must be immediately copy-pasteable and usable without modification
 - Use all context gathered: task type, budget, skill level, domain specifics
 - For image tools: include style, lighting, composition, aspect ratio, negative prompts
@@ -1620,7 +1294,6 @@ PROMPT QUALITY RULES (critical):
 - For voice tools: include tone, pace, emotion, audience
 - For video tools: include camera angle, motion, lighting, scene description, duration
 - For research tools: include scope, source preference, output format
-- No prompt should be vague, generic, or wasteful — precision = less compute, better results
 
 OPTIONS FORMAT:
 |||OPTIONS_START
@@ -1646,18 +1319,24 @@ Automation: Make (Integromat), n8n, Zapier, ActivePieces, Pipedream
 Data: Julius AI, ChatGPT Advanced Data Analysis, Akkio, Obviously AI`;
 
 // ============================================================
-// CONVERSATION STATE
+// STATE — Analytics session tracking
 // ============================================================
 let messages = [];
 let isThinking = false;
+const SESSION_ID = crypto.randomUUID();
+let isFirstMessage = true;
+let firstTaskDescription = '';
 
 // ============================================================
-// GROQ API CALL — Native OpenAI format, zero conversion
+// GROQ API CALL — Native OpenAI format
 // ============================================================
 async function callGroq(userMessage) {
   messages.push({ role: "user", content: userMessage });
 
-  // System prompt goes as first message in the array
+  if (isFirstMessage) {
+    firstTaskDescription = userMessage;
+  }
+
   const groqMessages = [
     { role: "system", content: SYSTEM_PROMPT },
     ...messages
@@ -1671,7 +1350,16 @@ async function callGroq(userMessage) {
       messages: groqMessages,
       max_tokens: 8000,
       temperature: 0.7,
-      top_p: 0.9
+      top_p: 0.9,
+      // Analytics metadata — saved to Supabase via chat.js
+      sessionId: SESSION_ID,
+      taskDescription: firstTaskDescription,
+      meta: {
+        isFirstMessage: isFirstMessage,
+        domain: null,
+        budget: null,
+        skillLevel: null
+      }
     })
   });
 
@@ -1680,6 +1368,8 @@ async function callGroq(userMessage) {
     throw new Error(JSON.stringify(err));
   }
 
+  isFirstMessage = false;
+
   const data = await response.json();
   const reply = data.choices[0].message.content;
   messages.push({ role: "assistant", content: reply });
@@ -1687,7 +1377,7 @@ async function callGroq(userMessage) {
 }
 
 // ============================================================
-// UI FUNCTIONS
+// UI — Bullet formatting
 // ============================================================
 function formatBullets(text) {
   const lines = text.split('\n');
@@ -1704,19 +1394,20 @@ function formatBullets(text) {
   return html || text;
 }
 
+// ============================================================
+// UI — Messages
+// ============================================================
 function addMessage(role, content, options = null) {
   const messagesEl = document.getElementById('messages');
   const uid = Date.now() + Math.random();
   const msg = document.createElement('div');
   msg.className = 'message';
-  msg.style.animationDelay = '0ms';
   const isAI = role === 'ai';
-  const formattedContent = isAI ? formatBullets(content) : content;
   msg.innerHTML = `
     <div class="msg-avatar ${isAI ? 'ai' : 'user'}">${isAI ? 'NX' : 'U'}</div>
     <div class="msg-bubble">
       <div class="msg-sender">${isAI ? 'NEXUS' : 'YOU'}</div>
-      <div class="msg-content ${isAI ? 'ai-msg' : 'user-msg'}">${formattedContent}</div>
+      <div class="msg-content ${isAI ? 'ai-msg' : 'user-msg'}">${isAI ? formatBullets(content) : content}</div>
       ${options ? buildOptionsHTML(options, uid) : ''}
     </div>
   `;
@@ -1728,20 +1419,22 @@ function buildOptionsHTML(options, uid) {
   const btns = options.map(o =>
     `<button class="option-btn" onclick="selectOption(this, '${o.replace(/'/g, "\\'")}')">${o}</button>`
   ).join('');
-  const otherId = `other-input-${uid}`;
-  const otherBtn = `<button class="option-btn other-btn" onclick="toggleOther(this, '${otherId}')">✎ Other</button>`;
-  const otherInput = `
+  const otherId = `other-${uid}`;
+  return `
+    <div class="options-grid">
+      ${btns}
+      <button class="option-btn other-btn" onclick="toggleOther(this,'${otherId}')">✎ Other</button>
+    </div>
     <div class="other-input-row" id="${otherId}" style="display:none;">
-      <input class="other-text-input" type="text" placeholder="Type your answer..." onkeydown="otherKeydown(event, this)" />
+      <input class="other-text-input" type="text" placeholder="Type your answer..." onkeydown="otherKeydown(event,this)" />
       <button class="other-send-btn" onclick="sendOther(this)">→</button>
     </div>`;
-  return `<div class="options-grid">${btns}${otherBtn}</div>${otherInput}`;
 }
 
-function toggleOther(btn, inputId) {
+function toggleOther(btn, id) {
   btn.closest('.options-grid').querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
-  const row = document.getElementById(inputId);
+  const row = document.getElementById(id);
   if (row) { row.style.display = 'flex'; row.querySelector('input').focus(); }
 }
 
@@ -1750,18 +1443,16 @@ function otherKeydown(e, input) {
 }
 
 function sendOther(btn) {
-  const input = btn.previousElementSibling;
-  const val = input.value.trim();
+  const val = btn.previousElementSibling.value.trim();
   if (!val) return;
   document.getElementById('userInput').value = val;
   sendMessage();
 }
 
 function selectOption(btn, value) {
-  const grid = btn.closest('.options-grid');
-  grid.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+  btn.closest('.options-grid').querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
-  const otherRow = grid.parentElement.querySelector('.other-input-row');
+  const otherRow = btn.closest('.options-grid').parentElement.querySelector('.other-input-row');
   if (otherRow) otherRow.style.display = 'none';
   setTimeout(() => {
     document.getElementById('userInput').value = value;
@@ -1770,19 +1461,12 @@ function selectOption(btn, value) {
 }
 
 function showTyping() {
-  const messagesEl = document.getElementById('messages');
-  const typing = document.createElement('div');
-  typing.className = 'message';
-  typing.id = 'typing-indicator';
-  typing.innerHTML = `
-    <div class="msg-avatar ai">NX</div>
-    <div class="msg-bubble">
-      <div class="msg-sender">NEXUS</div>
-      <div class="typing"><span></span><span></span><span></span></div>
-    </div>
-  `;
-  messagesEl.appendChild(typing);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  const el = document.createElement('div');
+  el.className = 'message';
+  el.id = 'typing-indicator';
+  el.innerHTML = `<div class="msg-avatar ai">NX</div><div class="msg-bubble"><div class="msg-sender">NEXUS</div><div class="typing"><span></span><span></span><span></span></div></div>`;
+  document.getElementById('messages').appendChild(el);
+  document.getElementById('messages').scrollTop = 99999;
 }
 
 function hideTyping() {
@@ -1790,6 +1474,9 @@ function hideTyping() {
   if (el) el.remove();
 }
 
+// ============================================================
+// PARSING
+// ============================================================
 function parseOptions(reply) {
   const match = reply.match(/\|\|\|OPTIONS_START\s*([\s\S]*?)\s*\|\|\|OPTIONS_END/);
   if (!match) return null;
@@ -1804,156 +1491,138 @@ function stripMarkers(reply) {
 }
 
 function parseAndRenderTools(reply) {
-  const jsonMatch = reply.match(/\|\|\|JSON_START\s*([\s\S]*?)\s*\|\|\|JSON_END/);
-  if (!jsonMatch) return null;
+  const match = reply.match(/\|\|\|JSON_START\s*([\s\S]*?)\s*\|\|\|JSON_END/);
+  if (!match) return null;
   try {
-    const data = JSON.parse(jsonMatch[1]);
-    if (data.mode === 'pipeline') { renderPipeline(data); } else { renderSingle(data); }
+    const data = JSON.parse(match[1]);
+    data.mode === 'pipeline' ? renderPipeline(data) : renderSingle(data);
     return stripMarkers(reply);
   } catch(e) { return null; }
 }
 
-// ── SINGLE TOOL MODE ──────────────────────────────────────────
+// ============================================================
+// RENDER — Single Tool Mode
+// ============================================================
 function renderSingle(data) {
   const panel = document.getElementById('resultsPanel');
   panel.innerHTML = '';
-
-  const header = document.createElement('div');
-  header.className = 'results-header';
-  header.textContent = `Recommendations — ${(data.domain || 'AI').toUpperCase()}`;
-  panel.appendChild(header);
-
-  const banner = document.createElement('div');
-  banner.className = 'neutrality-banner';
-  banner.innerHTML = `<span class="nb-icon">⚖</span><span>Recommendations based <strong>solely on your stated requirements</strong>. No tool is sponsored or preferred. Fit scores reflect requirement match only.</span>`;
+  panel.appendChild(makeEl('div', 'results-header', `Recommendations — ${(data.domain || 'AI').toUpperCase()}`));
+  const banner = makeEl('div', 'neutrality-banner');
+  banner.innerHTML = `<span class="nb-icon">⚖</span><span>Recommendations based <strong>solely on your stated requirements</strong>. No tool is sponsored or preferred.</span>`;
   panel.appendChild(banner);
 
   const promptMap = {};
   (data.tool_prompts || []).forEach(tp => { promptMap[tp.tool] = tp.prompts || []; });
 
   const allTools = Object.values(AI_TOOLS_DB).flat();
-  data.tools.forEach((toolName, index) => {
-    const toolData = allTools.find(t => t.name === toolName);
-    if (!toolData) return;
-    const score = data.scores[index] || (90 - index * 8);
-    const toolPromptData = (data.tool_prompts || []).find(tp => tp.tool === toolName);
-    const card = createToolCard(toolData, score, index === 0, toolPromptData ? toolPromptData.prompts : null);
-    card.style.animationDelay = `${index * 120}ms`;
+  data.tools.forEach((name, i) => {
+    const tool = allTools.find(t => t.name === name);
+    if (!tool) return;
+    const score = data.scores[i] || (90 - i * 8);
+    const card = createToolCard(tool, score, i === 0, promptMap[name] || null);
+    card.style.animationDelay = `${i * 120}ms`;
     panel.appendChild(card);
   });
 
-  const note = document.createElement('div');
+  const note = makeEl('div', '');
   note.style.cssText = 'padding:1rem;font-size:0.7rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);margin-top:0.5rem;';
   note.textContent = `✦ ${data.reasoning}`;
   panel.appendChild(note);
 
-  if (data.action_steps && data.action_steps.length) {
-    panel.appendChild(buildActionSteps(data.action_steps, promptMap));
+  if (data.action_steps?.length) {
+    const pm = {};
+    (data.tool_prompts || []).forEach(tp => { pm[tp.tool] = tp.prompts || []; });
+    panel.appendChild(buildActionSteps(data.action_steps, pm));
   }
 }
 
-// ── PIPELINE / MULTI-TOOL MODE ────────────────────────────────
+// ============================================================
+// RENDER — Pipeline Mode
+// ============================================================
 function renderPipeline(data) {
   const panel = document.getElementById('resultsPanel');
   panel.innerHTML = '';
   const allTools = Object.values(AI_TOOLS_DB).flat();
 
-  const header = document.createElement('div');
-  header.className = 'results-header';
-  header.textContent = `AI PIPELINE — ${data.pipeline.length} SUBTASKS`;
-  panel.appendChild(header);
+  panel.appendChild(makeEl('div', 'results-header', `AI PIPELINE — ${data.pipeline.length} SUBTASKS`));
 
-  const sumBanner = document.createElement('div');
-  sumBanner.className = 'pipeline-summary-banner';
-  sumBanner.innerHTML = `<span class="psb-icon">◈</span><div><div class="psb-title">Multi-Tool Workflow Detected</div><div class="psb-text">${data.summary}</div></div>`;
-  panel.appendChild(sumBanner);
+  const sb = makeEl('div', 'pipeline-summary-banner');
+  sb.innerHTML = `<span class="psb-icon">◈</span><div><div class="psb-title">Multi-Tool Workflow Detected</div><div class="psb-text">${data.summary}</div></div>`;
+  panel.appendChild(sb);
 
-  const banner = document.createElement('div');
-  banner.className = 'neutrality-banner';
-  banner.innerHTML = `<span class="nb-icon">⚖</span><span>Each subtask is assigned the <strong>best-fit tool based on requirements</strong> only — no brand bias. Tools are selected independently per subtask.</span>`;
-  panel.appendChild(banner);
+  const nb = makeEl('div', 'neutrality-banner');
+  nb.innerHTML = `<span class="nb-icon">⚖</span><span>Each subtask is assigned the <strong>best-fit tool</strong> based on requirements only — no brand bias.</span>`;
+  panel.appendChild(nb);
 
-  const pipelineEl = document.createElement('div');
-  pipelineEl.className = 'pipeline-container';
+  const container = makeEl('div', 'pipeline-container');
 
   data.pipeline.forEach((step, idx) => {
-    const toolData = allTools.find(t => t.name === step.tool);
-    const scoreColor = step.fit_score >= 80 ? '#00d4aa' : step.fit_score >= 60 ? '#f59e0b' : '#ff6b6b';
-    const icon = toolData ? toolData.icon : '🔧';
-    const color = toolData ? toolData.color : '#7c5cfc';
-    const pricing = toolData ? toolData.pricing : '';
+    const tool = allTools.find(t => t.name === step.tool);
+    const sc = step.fit_score >= 80 ? '#00d4aa' : step.fit_score >= 60 ? '#f59e0b' : '#ff6b6b';
+    const icon = tool?.icon || '🔧';
+    const color = tool?.color || '#7c5cfc';
 
-    const node = document.createElement('div');
-    node.className = 'pipeline-node';
+    const node = makeEl('div', 'pipeline-node');
     node.style.animationDelay = `${idx * 150}ms`;
     node.innerHTML = `
       <div class="pn-step-badge">STEP ${step.step}</div>
-      <div class="pn-card" style="border-color: ${color}44">
+      <div class="pn-card" style="border-color:${color}44">
         <div class="pn-card-top">
           <div class="pn-icon" style="background:${color}18;border:1px solid ${color}44">${icon}</div>
           <div class="pn-meta">
             <div class="pn-subtask">${step.subtask}</div>
             <div class="pn-tool-name">${step.tool}</div>
-            ${pricing ? `<div class="pn-pricing">${pricing}</div>` : ''}
+            ${tool?.pricing ? `<div class="pn-pricing">${tool.pricing}</div>` : ''}
           </div>
-          <div class="pn-score" style="color:${scoreColor};border-color:${scoreColor}44;background:${scoreColor}10">${step.fit_score}%</div>
+          <div class="pn-score" style="color:${sc};border-color:${sc}44;background:${sc}10">${step.fit_score}%</div>
         </div>
         <div class="pn-description">${step.description}</div>
-        <div class="pn-output-row">
-          <span class="pn-output-label">OUTPUT →</span>
-          <span class="pn-output-text">${step.output}</span>
-        </div>
-        ${toolData && toolData.tradeoff ? `<div class="pn-tradeoff"><span>⚖</span> ${toolData.tradeoff}</div>` : ''}
-        <div class="pn-guide-toggle" onclick="togglePnGuide(this)">
-          <span class="arrow">▶</span> Quick Start Guide
-        </div>
+        <div class="pn-output-row"><span class="pn-output-label">OUTPUT →</span><span class="pn-output-text">${step.output}</span></div>
+        ${tool?.tradeoff ? `<div class="pn-tradeoff"><span>⚖</span> ${tool.tradeoff}</div>` : ''}
+        <div class="pn-guide-toggle" onclick="togglePnGuide(this)"><span class="arrow">▶</span> Quick Start Guide</div>
         <div class="pn-guide-steps">
-          ${toolData ? toolData.guide.map((g, i) => `
-            <div class="guide-step">
-              <div class="step-num">${i+1}</div>
-              <div class="step-text"><strong>${g.title}</strong> — ${g.desc}</div>
-            </div>`).join('') : ''}
-          ${toolData ? `<a href="${toolData.url}" target="_blank" class="tool-link">Open ${step.tool} ↗</a>` : ''}
+          ${tool ? tool.guide.map((g, i) => `<div class="guide-step"><div class="step-num">${i+1}</div><div class="step-text"><strong>${g.title}</strong> — ${g.desc}</div></div>`).join('') : ''}
+          ${tool ? `<a href="${tool.url}" target="_blank" class="tool-link">Open ${step.tool} ↗</a>` : ''}
         </div>
-        ${step.prompts && step.prompts.length ? buildPromptSection(step.prompts, step.tool) : ''}
-      </div>
-    `;
-    pipelineEl.appendChild(node);
+        ${step.prompts?.length ? buildPromptSection(step.prompts, step.tool) : ''}
+      </div>`;
+    container.appendChild(node);
 
     if (step.connects_to !== null && idx < data.pipeline.length - 1) {
-      const connector = document.createElement('div');
-      connector.className = 'pipeline-connector';
-      connector.innerHTML = `
-        <div class="pc-line"></div>
-        <div class="pc-arrow-head">▼</div>
-        <div class="pc-label">${step.output}</div>
-      `;
-      pipelineEl.appendChild(connector);
+      const conn = makeEl('div', 'pipeline-connector');
+      conn.innerHTML = `<div class="pc-line"></div><div class="pc-arrow-head">▼</div><div class="pc-label">${step.output}</div>`;
+      container.appendChild(conn);
     }
   });
 
-  panel.appendChild(pipelineEl);
+  panel.appendChild(container);
 
-  const orchNote = document.createElement('div');
-  orchNote.className = 'orchestration-note';
-  orchNote.innerHTML = `<span class="orch-icon">⟳</span><div><strong>Orchestration:</strong> ${data.orchestration}</div>`;
-  panel.appendChild(orchNote);
+  const orch = makeEl('div', 'orchestration-note');
+  orch.innerHTML = `<span class="orch-icon">⟳</span><div><strong>Orchestration:</strong> ${data.orchestration}</div>`;
+  panel.appendChild(orch);
 
-  const reasonNote = document.createElement('div');
-  reasonNote.style.cssText = 'padding:1rem;font-size:0.7rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);';
-  reasonNote.textContent = `✦ ${data.reasoning}`;
-  panel.appendChild(reasonNote);
+  const rn = makeEl('div', '');
+  rn.style.cssText = 'padding:1rem;font-size:0.7rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);';
+  rn.textContent = `✦ ${data.reasoning}`;
+  panel.appendChild(rn);
 
-  if (data.action_steps && data.action_steps.length) {
-    const promptMap = {};
-    data.pipeline.forEach(step => {
-      if (step.prompts && step.prompts.length) {
-        promptMap[step.step] = step.prompts;
-        promptMap[step.tool] = step.prompts;
-      }
+  if (data.action_steps?.length) {
+    const pm = {};
+    data.pipeline.forEach(s => {
+      if (s.prompts?.length) { pm[s.step] = s.prompts; pm[s.tool] = s.prompts; }
     });
-    panel.appendChild(buildActionSteps(data.action_steps, promptMap));
+    panel.appendChild(buildActionSteps(data.action_steps, pm));
   }
+}
+
+// ============================================================
+// HELPERS — Cards & Prompts
+// ============================================================
+function makeEl(tag, cls, text = '') {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text) el.textContent = text;
+  return el;
 }
 
 function togglePnGuide(el) {
@@ -1961,61 +1630,52 @@ function togglePnGuide(el) {
   el.nextElementSibling.classList.toggle('visible');
 }
 
-// ── BUILD PROMPT SECTION ──────────────────────────────────────
 function buildPromptSection(prompts, toolName) {
   const uid = 'ps_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
   const cards = prompts.map((p, i) => {
-    const promptId = `${uid}_${i}`;
+    const pid = `${uid}_${i}`;
     return `
-    <div class="prompt-card" id="pcard_${promptId}">
-      <div class="prompt-card-header">
-        <span class="prompt-label">⚡ ${p.label || 'Prompt ' + (i+1)}</span>
-        <span class="prompt-purpose">${p.purpose || ''}</span>
-        <button class="prompt-copy-btn" onclick="copyPrompt(this, 'pt_${promptId}')">⎘ Copy</button>
-      </div>
-      <div class="prompt-text" id="pt_${promptId}">${escHtml(p.prompt)}</div>
-      <div class="prompt-usage-hint">
-        <span class="puh-icon">↗</span>
-        <span>Open <strong>${toolName || 'the tool'}</strong> → paste this prompt directly into the input field</span>
-      </div>
-    </div>`;
+      <div class="prompt-card">
+        <div class="prompt-card-header">
+          <span class="prompt-label">⚡ ${p.label || 'Prompt ' + (i+1)}</span>
+          <span class="prompt-purpose">${p.purpose || ''}</span>
+          <button class="prompt-copy-btn" onclick="copyText(this,'pt_${pid}')">⎘ Copy</button>
+        </div>
+        <div class="prompt-text" id="pt_${pid}">${escHtml(p.prompt)}</div>
+        <div class="prompt-usage-hint">
+          <span class="puh-icon">↗</span>
+          <span>Open <strong>${toolName || 'the tool'}</strong> → paste this prompt directly into the input field</span>
+        </div>
+      </div>`;
   }).join('');
 
   return `
-    <div class="prompt-section" id="${uid}">
+    <div class="prompt-section">
       <div class="prompt-section-toggle open" onclick="togglePromptSection(this)">
         <span class="arrow" style="transform:rotate(90deg)">▶</span>
         <span class="ps-icon">⚡</span>
         Ready-to-Use Prompts (${prompts.length})
       </div>
       <div class="prompt-cards-container visible">${cards}</div>
-    </div>
-  `;
+    </div>`;
 }
 
-// ── BUILD ACTION STEPS ────────────────────────────────────────
 function buildActionSteps(steps, promptMap) {
-  const el = document.createElement('div');
-  el.className = 'action-steps-section';
-
-  const totalMins = steps.reduce((acc, s) => {
-    const m = parseInt((s.duration || '').replace(/[^0-9]/g, '')) || 5;
-    return acc + m;
-  }, 0);
+  const el = makeEl('div', 'action-steps-section');
+  const totalMins = steps.reduce((a, s) => a + (parseInt((s.duration || '').replace(/\D/g, '')) || 5), 0);
 
   const stepsHtml = steps.map(s => {
     const prompts = (promptMap && (promptMap[s.step] || promptMap[s.tool])) || [];
-
     const inlinePrompts = prompts.map((p, i) => {
-      const inlineId = `inline_${s.step}_${i}_${Date.now().toString(36)}`;
+      const id = `ip_${s.step}_${i}_${Date.now().toString(36)}`;
       return `
         <div class="inline-prompt-block">
           <div class="ipb-header">
             <span class="ipb-label">⚡ ${p.label || 'Prompt'}</span>
             <span class="ipb-purpose">${p.purpose || ''}</span>
-            <button class="ipb-copy-btn" onclick="copyInlinePrompt(this, '${inlineId}')">⎘ Copy Prompt</button>
+            <button class="ipb-copy-btn" onclick="copyText(this,'${id}')">⎘ Copy Prompt</button>
           </div>
-          <div class="ipb-text" id="${inlineId}">${escHtml(p.prompt)}</div>
+          <div class="ipb-text" id="${id}">${escHtml(p.prompt)}</div>
           <div class="ipb-instruction">↗ Paste this into <strong>${s.tool}</strong></div>
         </div>`;
     }).join('');
@@ -2040,77 +1700,26 @@ function buildActionSteps(steps, promptMap) {
       <div class="action-steps-title">Execution Roadmap</div>
       <div class="action-steps-subtitle">~${totalMins} min total · ${steps.length} steps</div>
     </div>
-    <div class="action-steps-list">${stepsHtml}</div>
-  `;
+    <div class="action-steps-list">${stepsHtml}</div>`;
   return el;
 }
 
-function copyInlinePrompt(btn, id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const text = el.textContent;
-  const doCopy = () => {
-    btn.textContent = '✓ Copied!';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = '⎘ Copy Prompt'; btn.classList.remove('copied'); }, 2200);
-  };
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(doCopy).catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = text; document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); document.body.removeChild(ta); doCopy();
-    });
-  } else {
-    const ta = document.createElement('textarea');
-    ta.value = text; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta); doCopy();
-  }
-}
-
-function escHtml(str) {
-  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function togglePromptSection(el) {
-  el.classList.toggle('open');
-  el.nextElementSibling.classList.toggle('visible');
-}
-
-function copyPrompt(btn, id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const text = el.textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    btn.textContent = '✓ Copied';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = '⎘ Copy'; btn.classList.remove('copied'); }, 2000);
-  }).catch(() => {
-    const ta = document.createElement('textarea');
-    ta.value = text; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    btn.textContent = '✓ Copied';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = '⎘ Copy'; btn.classList.remove('copied'); }, 2000);
-  });
-}
-
 function createToolCard(tool, score, isTop, prompts = null) {
-  const card = document.createElement('div');
-  card.className = `tool-card ${isTop ? 'top-pick' : ''}`;
-  const circumference = 2 * Math.PI * 18;
-  const offset = circumference - (score / 100) * circumference;
-  const scoreColor = score >= 80 ? '#00d4aa' : score >= 60 ? '#f59e0b' : '#ff6b6b';
+  const card = makeEl('div', `tool-card ${isTop ? 'top-pick' : ''}`);
+  const circ = 2 * Math.PI * 18;
+  const offset = circ - (score / 100) * circ;
+  const sc = score >= 80 ? '#00d4aa' : score >= 60 ? '#f59e0b' : '#ff6b6b';
 
   card.innerHTML = `
     ${isTop ? '<div class="highlight-rank"></div>' : ''}
     <div class="tool-card-header">
-      <div class="tool-icon" style="background: ${tool.color}18; border: 1px solid ${tool.color}40">${tool.icon}</div>
+      <div class="tool-icon" style="background:${tool.color}18;border:1px solid ${tool.color}40">${tool.icon}</div>
       <div class="tool-meta">
         ${isTop ? '<div class="top-pick-label">★ Best Requirement Match</div>' : ''}
         <div class="tool-name">${tool.name}</div>
         <div class="tool-tagline">${tool.tagline}</div>
         <div class="tool-badges">
-          <span class="badge badge-match" style="color:${scoreColor}; border-color:${scoreColor}40; background:${scoreColor}12">Fit ${score}%</span>
+          <span class="badge badge-match" style="color:${sc};border-color:${sc}40;background:${sc}12">Fit ${score}%</span>
           <span class="badge badge-price">${tool.pricing}</span>
           <span class="badge badge-type">${tool.type}</span>
         </div>
@@ -2118,38 +1727,48 @@ function createToolCard(tool, score, isTop, prompts = null) {
       <div class="score-ring">
         <svg width="52" height="52" viewBox="0 0 52 52">
           <circle cx="26" cy="26" r="18" fill="none" stroke="var(--border)" stroke-width="3"/>
-          <circle cx="26" cy="26" r="18" fill="none" stroke="${scoreColor}" stroke-width="3"
-            stroke-dasharray="${circumference}"
-            stroke-dashoffset="${offset}"
-            stroke-linecap="round"/>
+          <circle cx="26" cy="26" r="18" fill="none" stroke="${sc}" stroke-width="3" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
         </svg>
-        <div class="score-num" style="color:${scoreColor}">${score}</div>
+        <div class="score-num" style="color:${sc}">${score}</div>
       </div>
     </div>
     <div class="tool-desc">${tool.description}</div>
     ${tool.tradeoff ? `<div class="tradeoff-row"><span class="tradeoff-icon">⚖</span><span class="tradeoff-text"><strong>Honest tradeoff:</strong> ${tool.tradeoff}</span></div>` : ''}
     <div class="guide-section">
-      <button class="guide-toggle" onclick="toggleGuide(this)">
-        <span class="arrow">▶</span> Quick Start Guide
-      </button>
+      <button class="guide-toggle" onclick="toggleGuide(this)"><span class="arrow">▶</span> Quick Start Guide</button>
       <div class="guide-steps">
-        ${tool.guide.map((step, i) => `
-          <div class="guide-step">
-            <div class="step-num">${i + 1}</div>
-            <div class="step-text"><strong>${step.title}</strong> — ${step.desc}</div>
-          </div>
-        `).join('')}
+        ${tool.guide.map((g, i) => `<div class="guide-step"><div class="step-num">${i+1}</div><div class="step-text"><strong>${g.title}</strong> — ${g.desc}</div></div>`).join('')}
         <a href="${tool.url}" target="_blank" class="tool-link">Open ${tool.name} ↗</a>
       </div>
     </div>
-    ${prompts && prompts.length ? buildPromptSection(prompts, tool.name) : ''}
-  `;
+    ${prompts?.length ? buildPromptSection(prompts, tool.name) : ''}`;
   return card;
 }
 
-function toggleGuide(btn) {
-  btn.classList.toggle('open');
-  btn.nextElementSibling.classList.toggle('visible');
+function toggleGuide(btn) { btn.classList.toggle('open'); btn.nextElementSibling.classList.toggle('visible'); }
+function togglePromptSection(el) { el.classList.toggle('open'); el.nextElementSibling.classList.toggle('visible'); }
+
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function copyText(btn, id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const text = el.textContent;
+  const orig = btn.textContent;
+  const done = () => {
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(done).catch(() => { fallbackCopy(text); done(); });
+  } else { fallbackCopy(text); done(); }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta);
 }
 
 // ============================================================
@@ -2163,7 +1782,6 @@ async function sendMessage() {
 
   input.value = '';
   input.style.height = 'auto';
-
   document.querySelectorAll('.option-btn').forEach(b => { b.disabled = true; b.style.opacity = '0.4'; });
 
   addMessage('user', text);
@@ -2179,8 +1797,7 @@ async function sendMessage() {
       addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded →');
     } else {
       const options = parseOptions(reply);
-      const cleanText = stripMarkers(reply);
-      addMessage('ai', cleanText, options);
+      addMessage('ai', stripMarkers(reply), options);
     }
   } catch (e) {
     hideTyping();
@@ -2200,42 +1817,39 @@ function autoResize(el) {
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
+// ============================================================
+// RESET
+// ============================================================
 function resetApp() {
   messages = [];
+  isFirstMessage = true;
+  firstTaskDescription = '';
   document.getElementById('messages').innerHTML = '';
   document.getElementById('resultsPanel').innerHTML = `
-    <div class="empty-state" id="emptyState">
+    <div class="empty-state">
       <div class="empty-icon">◈</div>
       <div class="empty-title">Awaiting Analysis</div>
       <div class="empty-sub">Describe your task in the chat and NEXUS will identify the best AI tools for your specific needs.</div>
-    </div>
-  `;
+    </div>`;
   setTimeout(addWelcomeMessage, 100);
 }
 
 function addWelcomeMessage() {
   addMessage('ai', `• Welcome — I'm <strong>NEXUS</strong>, your AI Tool Intelligence System.\n• Powered by Llama 3.3 70B via Groq for ultra-fast responses.\n• I know 200+ AI tools across writing, coding, images, research, voice, video, automation, and data.\n• Tell me what task you want to accomplish, and I'll find the perfect tool for you.`);
 }
+
 // ============================================================
 // THEME TOGGLE
 // ============================================================
 function toggleTheme() {
-  const body = document.body;
-  const btn = document.getElementById('themeBtn');
-  body.classList.toggle('light-mode');
-  if (body.classList.contains('light-mode')) {
-    btn.textContent = '☀️';
-    localStorage.setItem('nexus-theme', 'light');
-  } else {
-    btn.textContent = '🌙';
-    localStorage.setItem('nexus-theme', 'dark');
-  }
+  const isLight = document.body.classList.toggle('light-mode');
+  document.getElementById('themeBtn').textContent = isLight ? '☀️' : '🌙';
+  localStorage.setItem('nexus-theme', isLight ? 'light' : 'dark');
 }
 
-// Remember theme preference across sessions
+// Restore saved theme on load
 (function() {
-  const saved = localStorage.getItem('nexus-theme');
-  if (saved === 'light') {
+  if (localStorage.getItem('nexus-theme') === 'light') {
     document.body.classList.add('light-mode');
     document.addEventListener('DOMContentLoaded', () => {
       const btn = document.getElementById('themeBtn');
@@ -2243,6 +1857,7 @@ function toggleTheme() {
     });
   }
 })();
+
 // ============================================================
 // INIT
 // ============================================================
