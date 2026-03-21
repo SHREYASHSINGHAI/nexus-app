@@ -29,7 +29,6 @@
     overflow-x: hidden;
   }
 
-  /* Ambient background */
   body::before {
     content: '';
     position: fixed;
@@ -53,7 +52,6 @@
     z-index: 0;
   }
 
-  /* Header */
   header {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -97,7 +95,6 @@
     text-transform: uppercase;
   }
 
-  /* Main layout */
   .app-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -107,7 +104,6 @@
     z-index: 1;
   }
 
-  /* Chat Panel */
   .chat-panel {
     display: flex;
     flex-direction: column;
@@ -190,9 +186,7 @@
     color: var(--muted);
   }
 
-  .msg-bubble {
-    flex: 1;
-  }
+  .msg-bubble { flex: 1; }
 
   .msg-sender {
     font-size: 0.6rem;
@@ -223,7 +217,6 @@
     color: var(--highlight);
   }
 
-  /* Option buttons */
   .options-grid {
     display: flex;
     flex-wrap: wrap;
@@ -256,7 +249,6 @@
     background: rgba(0,212,170,0.08);
   }
 
-  /* Input area */
   .input-area {
     padding: 1.2rem 2rem;
     border-top: 1px solid var(--border);
@@ -286,10 +278,7 @@
     line-height: 1.5;
   }
 
-  .chat-input:focus {
-    border-color: var(--accent);
-  }
-
+  .chat-input:focus { border-color: var(--accent); }
   .chat-input::placeholder { color: var(--muted); }
 
   .send-btn {
@@ -309,7 +298,6 @@
   .send-btn:active { transform: scale(0.97); }
   .send-btn svg { width: 16px; height: 16px; color: white; }
 
-  /* Results Panel */
   .results-panel {
     height: calc(100vh - 65px);
     overflow-y: auto;
@@ -337,7 +325,6 @@
     background: var(--border);
   }
 
-  /* Tool Card */
   .tool-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -350,9 +337,7 @@
     transition: border-color 0.3s;
   }
 
-  .tool-card:hover {
-    border-color: rgba(124,92,252,0.4);
-  }
+  .tool-card:hover { border-color: rgba(124,92,252,0.4); }
 
   @keyframes cardIn {
     to { opacity: 1; transform: translateY(0); }
@@ -413,12 +398,7 @@
   .badge-price { background: rgba(124,92,252,0.12); border: 1px solid rgba(124,92,252,0.3); color: #a78bfa; }
   .badge-type { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.25); color: #ff9999; }
 
-  .score-ring {
-    width: 52px; height: 52px;
-    position: relative;
-    flex-shrink: 0;
-  }
-
+  .score-ring { width: 52px; height: 52px; position: relative; flex-shrink: 0; }
   .score-ring svg { transform: rotate(-90deg); }
   .score-ring .score-num {
     position: absolute;
@@ -439,7 +419,6 @@
     color: #9999b0;
   }
 
-  /* Guide section */
   .guide-section {
     border-top: 1px solid var(--border);
     padding: 1rem 1.6rem 1.4rem;
@@ -465,10 +444,7 @@
   .guide-toggle .arrow { transition: transform 0.3s; }
   .guide-toggle.open .arrow { transform: rotate(90deg); }
 
-  .guide-steps {
-    display: none;
-  }
-
+  .guide-steps { display: none; }
   .guide-steps.visible {
     display: flex;
     flex-direction: column;
@@ -496,12 +472,7 @@
     margin-top: 1px;
   }
 
-  .step-text {
-    font-size: 0.78rem;
-    line-height: 1.6;
-    color: var(--text);
-  }
-
+  .step-text { font-size: 0.78rem; line-height: 1.6; color: var(--text); }
   .step-text strong { color: var(--accent2); }
 
   .tool-link {
@@ -520,12 +491,8 @@
     transition: all 0.2s;
   }
 
-  .tool-link:hover {
-    background: rgba(124,92,252,0.1);
-    border-color: var(--accent);
-  }
+  .tool-link:hover { background: rgba(124,92,252,0.1); border-color: var(--accent); }
 
-  /* Empty state */
   .empty-state {
     display: flex;
     flex-direction: column;
@@ -537,11 +504,7 @@
     padding: 3rem;
   }
 
-  .empty-icon {
-    font-size: 3rem;
-    opacity: 0.3;
-  }
-
+  .empty-icon { font-size: 3rem; opacity: 0.3; }
   .empty-title {
     font-family: 'Syne', sans-serif;
     font-size: 1rem;
@@ -558,7 +521,6 @@
     max-width: 280px;
   }
 
-  /* Typing indicator */
   .typing {
     display: flex;
     gap: 4px;
@@ -584,7 +546,6 @@
     50% { opacity: 1; transform: scale(1.1); }
   }
 
-  /* Bullet formatting */
   .bullet-item {
     display: flex;
     gap: 0.5rem;
@@ -593,26 +554,10 @@
     font-size: 0.83rem;
     line-height: 1.55;
   }
-  .bullet-dot {
-    color: var(--accent2);
-    font-size: 0.65rem;
-    margin-top: 0.25rem;
-    flex-shrink: 0;
-  }
-  .bullet-plain {
-    font-size: 0.83rem;
-    line-height: 1.55;
-    margin-bottom: 0.3rem;
-    color: var(--muted);
-  }
+  .bullet-dot { color: var(--accent2); font-size: 0.65rem; margin-top: 0.25rem; flex-shrink: 0; }
+  .bullet-plain { font-size: 0.83rem; line-height: 1.55; margin-bottom: 0.3rem; color: var(--muted); }
 
-  /* Other input row */
-  .other-input-row {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.6rem;
-    align-items: center;
-  }
+  .other-input-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; align-items: center; }
   .other-text-input {
     flex: 1;
     background: var(--surface2);
@@ -640,7 +585,6 @@
   .other-send-btn:hover { background: #9b7afe; }
   .other-btn { border-color: rgba(124,92,252,0.35) !important; color: var(--accent) !important; }
 
-  /* Tradeoff row */
   .tradeoff-row {
     display: flex;
     gap: 0.6rem;
@@ -655,7 +599,6 @@
   .tradeoff-text { font-size: 0.75rem; line-height: 1.55; color: #bb9999; }
   .tradeoff-text strong { color: #ff9999; font-weight: 600; }
 
-  /* Neutrality banner */
   .neutrality-banner {
     display: flex;
     align-items: center;
@@ -672,7 +615,6 @@
   }
   .neutrality-banner .nb-icon { font-size: 0.9rem; flex-shrink: 0; }
 
-  /* ── PIPELINE STYLES ─────────────────────────────────────── */
   .pipeline-summary-banner {
     display: flex;
     align-items: flex-start;
@@ -695,14 +637,8 @@
   }
   .psb-text { font-size: 0.78rem; color: var(--text); line-height: 1.5; }
 
-  .pipeline-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    margin-bottom: 1rem;
-  }
+  .pipeline-container { display: flex; flex-direction: column; gap: 0; margin-bottom: 1rem; }
 
-  /* Pipeline node */
   .pipeline-node {
     animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     opacity: 0;
@@ -721,12 +657,7 @@
     align-items: center;
     gap: 0.5rem;
   }
-  .pn-step-badge::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
+  .pn-step-badge::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
   .pn-card {
     background: var(--surface);
@@ -738,12 +669,7 @@
   }
   .pn-card:hover { border-color: rgba(124,92,252,0.3); }
 
-  .pn-card-top {
-    display: flex;
-    align-items: center;
-    gap: 0.9rem;
-    padding: 1rem 1.2rem 0.7rem;
-  }
+  .pn-card-top { display: flex; align-items: center; gap: 0.9rem; padding: 1rem 1.2rem 0.7rem; }
 
   .pn-icon {
     width: 42px; height: 42px;
@@ -763,17 +689,8 @@
     color: var(--muted);
     margin-bottom: 0.15rem;
   }
-  .pn-tool-name {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--highlight);
-  }
-  .pn-pricing {
-    font-size: 0.65rem;
-    color: var(--muted);
-    margin-top: 0.1rem;
-  }
+  .pn-tool-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--highlight); }
+  .pn-pricing { font-size: 0.65rem; color: var(--muted); margin-top: 0.1rem; }
 
   .pn-score {
     font-family: 'Syne', sans-serif;
@@ -785,12 +702,7 @@
     flex-shrink: 0;
   }
 
-  .pn-description {
-    padding: 0 1.2rem 0.6rem;
-    font-size: 0.78rem;
-    line-height: 1.6;
-    color: #9999b0;
-  }
+  .pn-description { padding: 0 1.2rem 0.6rem; font-size: 0.78rem; line-height: 1.6; color: #9999b0; }
 
   .pn-output-row {
     display: flex;
@@ -800,20 +712,8 @@
     background: rgba(0,212,170,0.04);
     border-top: 1px dashed rgba(0,212,170,0.15);
   }
-  .pn-output-label {
-    font-size: 0.58rem;
-    letter-spacing: 0.15em;
-    font-weight: 700;
-    color: var(--accent2);
-    text-transform: uppercase;
-    flex-shrink: 0;
-  }
-  .pn-output-text {
-    font-size: 0.75rem;
-    color: var(--accent2);
-    opacity: 0.8;
-    font-style: italic;
-  }
+  .pn-output-label { font-size: 0.58rem; letter-spacing: 0.15em; font-weight: 700; color: var(--accent2); text-transform: uppercase; flex-shrink: 0; }
+  .pn-output-text { font-size: 0.75rem; color: var(--accent2); opacity: 0.8; font-style: italic; }
 
   .pn-tradeoff {
     display: flex;
@@ -856,37 +756,11 @@
   }
   .pn-guide-steps.visible { display: flex; }
 
-  /* Connector between pipeline steps */
-  .pipeline-connector {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0.3rem 0;
-    position: relative;
-  }
-  .pc-line {
-    width: 2px;
-    height: 20px;
-    background: linear-gradient(to bottom, var(--accent), var(--accent2));
-    border-radius: 2px;
-  }
-  .pc-arrow-head {
-    font-size: 0.7rem;
-    color: var(--accent2);
-    line-height: 1;
-    margin-top: -2px;
-  }
-  .pc-label {
-    font-size: 0.6rem;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    text-align: center;
-    max-width: 160px;
-    margin-top: 3px;
-    font-style: italic;
-  }
+  .pipeline-connector { display: flex; flex-direction: column; align-items: center; padding: 0.3rem 0; position: relative; }
+  .pc-line { width: 2px; height: 20px; background: linear-gradient(to bottom, var(--accent), var(--accent2)); border-radius: 2px; }
+  .pc-arrow-head { font-size: 0.7rem; color: var(--accent2); line-height: 1; margin-top: -2px; }
+  .pc-label { font-size: 0.6rem; letter-spacing: 0.08em; color: var(--muted); text-align: center; max-width: 160px; margin-top: 3px; font-style: italic; }
 
-  /* Orchestration footer note */
   .orchestration-note {
     display: flex;
     align-items: flex-start;
@@ -900,18 +774,10 @@
     color: var(--text);
     line-height: 1.6;
   }
-  .orch-icon {
-    font-size: 1rem;
-    color: var(--accent);
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
+  .orch-icon { font-size: 1rem; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
   .orchestration-note strong { color: var(--accent); }
 
-  /* ── PROMPT SECTION ──────────────────────────────────────── */
-  .prompt-section {
-    border-top: 1px solid var(--border);
-  }
+  .prompt-section { border-top: 1px solid var(--border); }
   .prompt-section-toggle {
     display: flex;
     align-items: center;
@@ -948,20 +814,8 @@
     border-bottom: 1px solid rgba(245,158,11,0.15);
     gap: 0.6rem;
   }
-  .prompt-label {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #f59e0b;
-  }
-  .prompt-purpose {
-    font-size: 0.68rem;
-    color: var(--muted);
-    flex: 1;
-    font-style: italic;
-  }
+  .prompt-label { font-family: 'Syne', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #f59e0b; }
+  .prompt-purpose { font-size: 0.68rem; color: var(--muted); flex: 1; font-style: italic; }
   .prompt-copy-btn {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.6rem;
@@ -993,36 +847,6 @@
   .puh-icon { color: var(--accent); font-size: 0.8rem; flex-shrink: 0; }
   .prompt-usage-hint strong { color: var(--accent); }
 
-  .action-step-prompt-hint {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.4rem;
-    margin: 0.3rem 0 0.2rem;
-    padding: 0.35rem 0.6rem;
-    background: rgba(245,158,11,0.07);
-    border: 1px solid rgba(245,158,11,0.2);
-    border-radius: 6px;
-    font-size: 0.7rem;
-    color: #c8a96e;
-    line-height: 1.4;
-  }
-  .asph-icon { color: #f59e0b; flex-shrink: 0; font-size: 0.75rem; margin-top: 1px; }
-  .action-step-prompt-hint strong { color: #f59e0b; }
-  .action-step-prompt-hint em { color: var(--accent); font-style: normal; }
-
-  .action-steps-footer {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.7rem 1.4rem;
-    background: rgba(0,212,170,0.04);
-    border-top: 1px solid rgba(0,212,170,0.12);
-    font-size: 0.7rem;
-    color: rgba(0,212,170,0.7);
-    line-height: 1.4;
-  }
-  .asf-icon { font-size: 0.9rem; }
-
   .prompt-text {
     padding: 0.75rem 0.9rem;
     font-size: 0.75rem;
@@ -1033,7 +857,6 @@
     word-break: break-word;
   }
 
-  /* ── ACTION STEPS SECTION ─────────────────────────────────── */
   .action-steps-section {
     margin-top: 1.5rem;
     border: 1px solid rgba(0,212,170,0.2);
@@ -1049,25 +872,9 @@
     background: rgba(0,212,170,0.06);
     border-bottom: 1px solid rgba(0,212,170,0.15);
   }
-  .action-steps-title {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.8rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent2);
-  }
-  .action-steps-subtitle {
-    font-size: 0.68rem;
-    color: var(--muted);
-    margin-left: auto;
-  }
-  .action-steps-list {
-    padding: 0.8rem 1.4rem 1.2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
+  .action-steps-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent2); }
+  .action-steps-subtitle { font-size: 0.68rem; color: var(--muted); margin-left: auto; }
+  .action-steps-list { padding: 0.8rem 1.4rem 1.2rem; display: flex; flex-direction: column; gap: 0; }
   .action-step-row {
     display: flex;
     align-items: flex-start;
@@ -1091,17 +898,8 @@
     margin-top: 1px;
   }
   .action-step-body { flex: 1; }
-  .action-step-action {
-    font-size: 0.8rem;
-    color: var(--text);
-    line-height: 1.5;
-    margin-bottom: 0.25rem;
-  }
-  .action-step-meta {
-    display: flex;
-    gap: 0.6rem;
-    align-items: center;
-  }
+  .action-step-action { font-size: 0.8rem; color: var(--text); line-height: 1.5; margin-bottom: 0.25rem; }
+  .action-step-meta { display: flex; gap: 0.6rem; align-items: center; }
   .action-step-tool {
     font-size: 0.6rem;
     letter-spacing: 0.1em;
@@ -1112,13 +910,8 @@
     padding: 0.15rem 0.45rem;
     border-radius: 4px;
   }
-  .action-step-duration {
-    font-size: 0.62rem;
-    color: var(--muted);
-    font-style: italic;
-  }
+  .action-step-duration { font-size: 0.62rem; color: var(--muted); font-style: italic; }
 
-  /* Inline prompt block inside action steps */
   .inline-prompt-block {
     margin: 0.55rem 0 0.35rem;
     border: 1px solid rgba(245,158,11,0.3);
@@ -1135,22 +928,8 @@
     border-bottom: 1px solid rgba(245,158,11,0.18);
     flex-wrap: wrap;
   }
-  .ipb-label {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #f59e0b;
-    flex-shrink: 0;
-  }
-  .ipb-purpose {
-    font-size: 0.65rem;
-    color: var(--muted);
-    font-style: italic;
-    flex: 1;
-    min-width: 0;
-  }
+  .ipb-label { font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #f59e0b; flex-shrink: 0; }
+  .ipb-purpose { font-size: 0.65rem; color: var(--muted); font-style: italic; flex: 1; min-width: 0; }
   .ipb-copy-btn {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.6rem;
@@ -1190,12 +969,10 @@
   }
   .ipb-instruction strong { color: var(--accent2); }
 
-  /* Scrollbar */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-  /* Responsive */
   @media (max-width: 900px) {
     .app-container { grid-template-columns: 1fr; }
     .chat-panel { height: 60vh; position: relative; top: 0; border-right: none; border-bottom: 1px solid var(--border); }
@@ -1225,10 +1002,7 @@
     background: linear-gradient(90deg, var(--accent), var(--accent2));
   }
 
-  .tool-card.top-pick {
-    border-color: rgba(124,92,252,0.35);
-    position: relative;
-  }
+  .tool-card.top-pick { border-color: rgba(124,92,252,0.35); position: relative; }
 
   .top-pick-label {
     font-size: 0.58rem;
@@ -1255,17 +1029,12 @@
 </header>
 
 <div class="app-container">
-  <!-- Chat Panel -->
   <div class="chat-panel">
     <div class="chat-header">
-      <div>
-        <div class="chat-title">INTELLIGENCE INTERFACE</div>
-      </div>
+      <div><div class="chat-title">INTELLIGENCE INTERFACE</div></div>
       <div class="status-badge">● ONLINE</div>
     </div>
-
     <div class="messages" id="messages"></div>
-
     <div class="input-area">
       <div class="input-row">
         <textarea
@@ -1285,7 +1054,6 @@
     </div>
   </div>
 
-  <!-- Results Panel -->
   <div class="results-panel" id="resultsPanel">
     <div class="empty-state" id="emptyState">
       <div class="empty-icon">◈</div>
@@ -1297,34 +1065,14 @@
 
 <script>
 // ============================================================
-// CONVERSATION STATE
-// ============================================================
-let state = {
-  phase: 'task',         // task → domain_confirm → details → result
-  task: '',
-  domain: '',
-  budget: '',
-  techLevel: '',
-  useCase: '',
-  priority: '',
-  teamSize: ''
-};
-
-let conversationHistory = [];
-
-// ============================================================
 // AI TOOL DATABASE
 // ============================================================
 const AI_TOOLS_DB = {
   writing: [
     {
-      name: "Claude (Anthropic)",
-      icon: "🤖",
-      color: "#7c5cfc",
+      name: "Claude (Anthropic)", icon: "🤖", color: "#7c5cfc",
       tagline: "Advanced reasoning, long-form writing, and nuanced analysis",
-      pricing: "Free / $20/mo Pro",
-      type: "LLM",
-      matchTags: ["writing", "analysis", "coding", "research", "creative"],
+      pricing: "Free / $20/mo Pro", type: "LLM",
       url: "https://claude.ai",
       description: "Best for complex writing tasks, document analysis, creative projects, and tasks requiring deep reasoning. Excels at maintaining context over very long documents.",
       tradeoff: "Context window is generous but free tier has message limits; not ideal for high-volume automated writing.",
@@ -1336,13 +1084,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "ChatGPT (OpenAI)",
-      icon: "💬",
-      color: "#10a37f",
+      name: "ChatGPT (OpenAI)", icon: "💬", color: "#10a37f",
       tagline: "Versatile assistant with plugins and image generation",
-      pricing: "Free / $20/mo Plus",
-      type: "LLM",
-      matchTags: ["writing", "creative", "coding", "browsing", "images"],
+      pricing: "Free / $20/mo Plus", type: "LLM",
       url: "https://chat.openai.com",
       description: "Excellent general-purpose writing assistant with access to web browsing, DALL-E image generation, and a vast plugin ecosystem. Great for diverse, everyday tasks.",
       tradeoff: "Can be verbose and sometimes overly hedged; free tier uses older GPT-3.5 which is noticeably weaker.",
@@ -1354,13 +1098,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "Jasper AI",
-      icon: "✍️",
-      color: "#ff6b35",
+      name: "Jasper AI", icon: "✍️", color: "#ff6b35",
       tagline: "Marketing-focused AI writing for teams",
-      pricing: "From $39/mo",
-      type: "Writing Agent",
-      matchTags: ["marketing", "copywriting", "ads", "seo", "brand"],
+      pricing: "From $39/mo", type: "Writing Agent",
       url: "https://jasper.ai",
       description: "Purpose-built for marketing teams. Includes brand voice training, campaign workflows, SEO optimization, and 50+ templates for ads, blogs, emails, and social.",
       tradeoff: "Expensive for solo users; underlying models are third-party LLMs, so quality isn't unique — you pay for workflow, not AI capability.",
@@ -1372,13 +1112,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "Notion AI",
-      icon: "📝",
-      color: "#000000",
+      name: "Notion AI", icon: "📝", color: "#555",
       tagline: "Embedded writing intelligence inside your workspace",
-      pricing: "$8/mo add-on",
-      type: "Workspace AI",
-      matchTags: ["notes", "docs", "summarize", "writing", "workspace"],
+      pricing: "$8/mo add-on", type: "Workspace AI",
       url: "https://notion.so",
       description: "Seamlessly integrated into Notion for drafting, summarizing, and transforming notes. Best for teams already using Notion as their knowledge base.",
       tradeoff: "Only useful if you already use Notion; AI quality lags behind dedicated writing tools.",
@@ -1392,13 +1128,9 @@ const AI_TOOLS_DB = {
   ],
   coding: [
     {
-      name: "GitHub Copilot",
-      icon: "⚡",
-      color: "#6e40c9",
+      name: "GitHub Copilot", icon: "⚡", color: "#6e40c9",
       tagline: "Real-time code completion inside your IDE",
-      pricing: "Free (limited) / $10/mo",
-      type: "Code AI",
-      matchTags: ["coding", "autocomplete", "ide", "development"],
+      pricing: "Free (limited) / $10/mo", type: "Code AI",
       url: "https://github.com/features/copilot",
       description: "The industry standard for AI code completion. Integrates directly into VS Code, JetBrains IDEs, Neovim, and more. Suggests entire functions based on context.",
       tradeoff: "Completions can be confidently wrong; works at file level only — no full codebase understanding without paying for enterprise tier.",
@@ -1410,13 +1142,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "Cursor",
-      icon: "🖱️",
-      color: "#2563eb",
+      name: "Cursor", icon: "🖱️", color: "#2563eb",
       tagline: "AI-native code editor with full codebase context",
-      pricing: "Free / $20/mo Pro",
-      type: "AI IDE",
-      matchTags: ["coding", "refactoring", "debugging", "fullstack", "codebase"],
+      pricing: "Free / $20/mo Pro", type: "AI IDE",
       url: "https://cursor.sh",
       description: "A fork of VS Code with AI deeply embedded. Can understand and edit across your entire codebase, not just the current file. Excellent for large projects.",
       tradeoff: "Requires local setup; free tier is limited; some extensions behave differently than in standard VS Code.",
@@ -1428,31 +1156,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "Claude (Anthropic)",
-      icon: "🤖",
-      color: "#7c5cfc",
-      tagline: "Exceptional reasoning for complex coding problems",
-      pricing: "Free / $20/mo Pro",
-      type: "LLM",
-      matchTags: ["coding", "debugging", "architecture", "review", "algorithms"],
-      url: "https://claude.ai",
-      description: "Particularly strong for architectural discussions, code review, complex debugging, and understanding large code snippets pasted into context.",
-      tradeoff: "Not an IDE — requires manual copy-paste; no real-time inline completion unlike Copilot or Cursor.",
-      guide: [
-        { title: "Paste your code", desc: "Copy and paste code directly into the chat with your question" },
-        { title: "Ask for review", desc: "Request code review, optimization, or bug identification" },
-        { title: "Architecture help", desc: "Describe your system and ask for <strong>design recommendations</strong>" },
-        { title: "Use Artifacts", desc: "Claude renders code artifacts you can copy with one click" }
-      ]
-    },
-    {
-      name: "Replit AI",
-      icon: "🔁",
-      color: "#f76c2f",
+      name: "Replit AI", icon: "🔁", color: "#f76c2f",
       tagline: "Build and deploy full apps from the browser",
-      pricing: "Free / $20/mo Core",
-      type: "Cloud IDE",
-      matchTags: ["coding", "deployment", "browser", "quick prototype", "no setup"],
+      pricing: "Free / $20/mo Core", type: "Cloud IDE",
       url: "https://replit.com",
       description: "Best for quick prototyping and deployment without local setup. AI helps write, debug, and deploy code entirely in the browser. Great for beginners.",
       tradeoff: "Performance-limited for large projects; code runs on Replit servers — not suitable for proprietary or sensitive codebases.",
@@ -1462,17 +1168,27 @@ const AI_TOOLS_DB = {
         { title: "Describe the app", desc: "Type what you want to build and let AI scaffold it" },
         { title: "Deploy instantly", desc: "Click Deploy to publish your app with a shareable URL" }
       ]
+    },
+    {
+      name: "Codeium", icon: "🟢", color: "#09b6a2",
+      tagline: "Free AI code completion for every developer",
+      pricing: "Free / $12/mo Teams", type: "Code AI",
+      url: "https://codeium.com",
+      description: "The best truly free Copilot alternative. Works in 70+ languages and 40+ editors with no usage limits on the free tier. Excellent for students and solo developers.",
+      tradeoff: "Slightly less accurate than Copilot on complex completions; enterprise features require paid plan.",
+      guide: [
+        { title: "Install extension", desc: "Search 'Codeium' in your editor's extension marketplace" },
+        { title: "Create free account", desc: "Sign up at <strong>codeium.com</strong> and authenticate" },
+        { title: "Start coding", desc: "Completions appear automatically as you type" },
+        { title: "Use chat", desc: "Open Codeium Chat sidebar to ask questions about your code" }
+      ]
     }
   ],
   image: [
     {
-      name: "Midjourney",
-      icon: "🎨",
-      color: "#2563eb",
+      name: "Midjourney", icon: "🎨", color: "#2563eb",
       tagline: "World-class aesthetic image generation",
-      pricing: "From $10/mo",
-      type: "Image AI",
-      matchTags: ["art", "creative", "aesthetic", "illustration", "concept art"],
+      pricing: "From $10/mo", type: "Image AI",
       url: "https://midjourney.com",
       description: "The gold standard for artistic image generation. Exceptional for concept art, illustrations, and aesthetic photography. Requires Discord but produces stunning results.",
       tradeoff: "No free tier; requires Discord; limited control over exact composition; not ideal for precise product or text-heavy images.",
@@ -1484,13 +1200,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "DALL-E 3 (OpenAI)",
-      icon: "🖼️",
-      color: "#10a37f",
+      name: "DALL-E 3 (OpenAI)", icon: "🖼️", color: "#10a37f",
       tagline: "Text-accurate image generation integrated with ChatGPT",
-      pricing: "Included in ChatGPT Plus",
-      type: "Image AI",
-      matchTags: ["images", "accurate text", "simple", "quick", "illustrations"],
+      pricing: "Included in ChatGPT Plus", type: "Image AI",
       url: "https://chat.openai.com",
       description: "Best for images requiring accurate text rendering and precise prompt following. Accessible directly in ChatGPT without needing a separate account.",
       tradeoff: "Artistic style is generic compared to Midjourney; limited resolution and no fine-tuning options.",
@@ -1502,13 +1214,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "Stable Diffusion (Auto1111)",
-      icon: "⚙️",
-      color: "#8b5cf6",
+      name: "Stable Diffusion (Auto1111)", icon: "⚙️", color: "#8b5cf6",
       tagline: "Open-source powerhouse with unlimited customization",
-      pricing: "Free (self-hosted)",
-      type: "Open Source",
-      matchTags: ["free", "local", "custom", "control", "no restrictions", "fine-tuning"],
+      pricing: "Free (self-hosted)", type: "Open Source",
       url: "https://github.com/AUTOMATIC1111/stable-diffusion-webui",
       description: "The ultimate control for those comfortable with technical setup. Runs locally, completely free, with thousands of community models and fine-tuning support.",
       tradeoff: "Requires a capable GPU and technical setup; quality depends on which model you choose; steep learning curve for beginners.",
@@ -1520,13 +1228,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "Adobe Firefly",
-      icon: "🔥",
-      color: "#ff4444",
+      name: "Adobe Firefly", icon: "🔥", color: "#ff4444",
       tagline: "Commercially safe AI images inside Adobe tools",
-      pricing: "Included in Adobe CC / Free tier",
-      type: "Creative AI",
-      matchTags: ["commercial", "photoshop", "professional", "safe", "editing"],
+      pricing: "Included in Adobe CC / Free tier", type: "Creative AI",
       url: "https://firefly.adobe.com",
       description: "Trained on licensed content, making it commercially safe. Integrates with Photoshop and Illustrator for generative fill, text effects, and vector generation.",
       tradeoff: "Output quality and creative range lags behind Midjourney; best value only if you already pay for Adobe CC.",
@@ -1540,13 +1244,9 @@ const AI_TOOLS_DB = {
   ],
   research: [
     {
-      name: "Perplexity AI",
-      icon: "🔍",
-      color: "#2563eb",
+      name: "Perplexity AI", icon: "🔍", color: "#2563eb",
       tagline: "Real-time AI search with cited sources",
-      pricing: "Free / $20/mo Pro",
-      type: "Search AI",
-      matchTags: ["research", "search", "current events", "citations", "web"],
+      pricing: "Free / $20/mo Pro", type: "Search AI",
       url: "https://perplexity.ai",
       description: "The best AI for research requiring current information. Searches the web in real-time and provides answers with full citations. Think Google + ChatGPT combined.",
       tradeoff: "Can still hallucinate when sources are thin; not suited for private document analysis; Pro required for advanced model access.",
@@ -1558,13 +1258,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "Elicit",
-      icon: "📚",
-      color: "#6b7280",
+      name: "Elicit", icon: "📚", color: "#6b7280",
       tagline: "AI research assistant for academic literature",
-      pricing: "Free (limited) / $10/mo",
-      type: "Research AI",
-      matchTags: ["academic", "papers", "literature review", "science", "research"],
+      pricing: "Free (limited) / $10/mo", type: "Research AI",
       url: "https://elicit.com",
       description: "Purpose-built for academic research. Automatically finds relevant papers, extracts key data, and synthesizes findings. Essential for literature reviews.",
       tradeoff: "Limited to academic papers; not useful for web research, news, or general knowledge tasks.",
@@ -1576,13 +1272,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "NotebookLM (Google)",
-      icon: "📓",
-      color: "#4285f4",
+      name: "NotebookLM (Google)", icon: "📓", color: "#4285f4",
       tagline: "AI that reasons over YOUR documents",
-      pricing: "Free",
-      type: "Document AI",
-      matchTags: ["documents", "summarize", "analyze", "pdfs", "research", "notes"],
+      pricing: "Free", type: "Document AI",
       url: "https://notebooklm.google",
       description: "Upload your own PDFs, documents, and notes. NotebookLM becomes an expert on YOUR sources only, with zero hallucination from outside data.",
       tradeoff: "Only knows what you upload — cannot answer questions beyond your provided sources; limited to 50 sources per notebook.",
@@ -1596,13 +1288,9 @@ const AI_TOOLS_DB = {
   ],
   voice: [
     {
-      name: "ElevenLabs",
-      icon: "🎙️",
-      color: "#f59e0b",
+      name: "ElevenLabs", icon: "🎙️", color: "#f59e0b",
       tagline: "Ultra-realistic AI voice cloning and generation",
-      pricing: "Free / From $5/mo",
-      type: "Voice AI",
-      matchTags: ["voice", "tts", "podcast", "audiobook", "cloning", "narration"],
+      pricing: "Free / From $5/mo", type: "Voice AI",
       url: "https://elevenlabs.io",
       description: "Industry-leading voice AI for realistic text-to-speech, voice cloning with just a few seconds of audio, and multilingual voiceovers. Used by major studios.",
       tradeoff: "Free tier is limited to 10,000 characters/month; voice cloning of real people raises ethical and legal concerns.",
@@ -1614,13 +1302,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "Suno AI",
-      icon: "🎵",
-      color: "#8b5cf6",
+      name: "Suno AI", icon: "🎵", color: "#8b5cf6",
       tagline: "Generate full songs with vocals from text prompts",
-      pricing: "Free / From $8/mo",
-      type: "Music AI",
-      matchTags: ["music", "songs", "audio", "vocals", "composition"],
+      pricing: "Free / From $8/mo", type: "Music AI",
       url: "https://suno.com",
       description: "Create complete songs with lyrics, melody, and vocals from a simple text description. Supports any genre from pop to classical in seconds.",
       tradeoff: "Limited control over exact musical structure; commercial licensing terms have been contested by music industry groups.",
@@ -1634,13 +1318,9 @@ const AI_TOOLS_DB = {
   ],
   video: [
     {
-      name: "Runway ML",
-      icon: "🎬",
-      color: "#ec4899",
+      name: "Runway ML", icon: "🎬", color: "#ec4899",
       tagline: "Professional AI video generation and editing",
-      pricing: "Free (125 credits) / From $15/mo",
-      type: "Video AI",
-      matchTags: ["video", "generation", "editing", "filmmaking", "effects"],
+      pricing: "Free (125 credits) / From $15/mo", type: "Video AI",
       url: "https://runwayml.com",
       description: "The professional choice for AI video. Offers Gen-3 text-to-video, image-to-video, video-to-video transformation, and advanced editing tools used by filmmakers.",
       tradeoff: "Expensive per-credit for longer clips; free tier is very limited; videos max at 10-16 seconds.",
@@ -1652,13 +1332,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "Sora (OpenAI)",
-      icon: "☀️",
-      color: "#f59e0b",
+      name: "Sora (OpenAI)", icon: "☀️", color: "#f59e0b",
       tagline: "Cinematic-quality video from text descriptions",
-      pricing: "Included in ChatGPT Plus/Pro",
-      type: "Video AI",
-      matchTags: ["video", "cinematic", "realistic", "text-to-video", "creative"],
+      pricing: "Included in ChatGPT Plus/Pro", type: "Video AI",
       url: "https://sora.com",
       description: "OpenAI's flagship video model producing strikingly realistic and coherent video up to 20 seconds. Available to Plus subscribers with clear motion understanding.",
       tradeoff: "Requires ChatGPT Plus/Pro subscription; limited to 20 seconds; content policy is restrictive for creative edge cases.",
@@ -1670,13 +1346,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "HeyGen",
-      icon: "🧑‍💼",
-      color: "#2563eb",
+      name: "HeyGen", icon: "🧑‍💼", color: "#2563eb",
       tagline: "AI avatar video creation for business",
-      pricing: "Free (1 min) / From $24/mo",
-      type: "Avatar AI",
-      matchTags: ["avatar", "presentation", "business", "spokesperson", "translation"],
+      pricing: "Free (1 min) / From $24/mo", type: "Avatar AI",
       url: "https://heygen.com",
       description: "Create professional-grade videos with AI avatars. Perfect for corporate training, product demos, and multilingual content without cameras or studios.",
       tradeoff: "Free tier gives only 1 minute; avatar videos can appear uncanny; not suitable for cinematic or artistic content.",
@@ -1690,13 +1362,9 @@ const AI_TOOLS_DB = {
   ],
   automation: [
     {
-      name: "Make (Integromat)",
-      icon: "🔗",
-      color: "#6d28d9",
+      name: "Make (Integromat)", icon: "🔗", color: "#6d28d9",
       tagline: "Visual workflow automation with 1500+ app integrations",
-      pricing: "Free / From $9/mo",
-      type: "Automation",
-      matchTags: ["automation", "workflow", "integration", "no-code", "scheduling"],
+      pricing: "Free / From $9/mo", type: "Automation",
       url: "https://make.com",
       description: "Visual drag-and-drop automation builder connecting 1500+ apps. More powerful than Zapier for complex multi-step workflows with conditional logic and data transformation.",
       tradeoff: "Steeper learning curve than Zapier; pricing can escalate with high operation volumes.",
@@ -1708,13 +1376,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "n8n",
-      icon: "🔄",
-      color: "#ea4b71",
+      name: "n8n", icon: "🔄", color: "#ea4b71",
       tagline: "Open-source automation with AI node support",
-      pricing: "Free (self-hosted) / From $20/mo cloud",
-      type: "Open Source Automation",
-      matchTags: ["automation", "open source", "self-hosted", "ai workflows", "developers"],
+      pricing: "Free (self-hosted) / From $20/mo cloud", type: "Open Source Automation",
       url: "https://n8n.io",
       description: "The developer-friendly automation platform with native AI agent capabilities. Self-hostable for maximum control. 400+ integrations with deep customization.",
       tradeoff: "Requires server setup for self-hosting; less intuitive UI than Zapier or Make for non-developers.",
@@ -1726,13 +1390,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "Zapier",
-      icon: "⚡",
-      color: "#ff4a00",
+      name: "Zapier", icon: "⚡", color: "#ff4a00",
       tagline: "The easiest app-to-app automation for non-developers",
-      pricing: "Free (5 Zaps) / From $19.99/mo",
-      type: "Automation",
-      matchTags: ["automation", "simple", "no-code", "beginners", "email", "crm"],
+      pricing: "Free (5 Zaps) / From $19.99/mo", type: "Automation",
       url: "https://zapier.com",
       description: "The most user-friendly automation tool. Best for simple trigger-action workflows. The AI-powered Zap builder can create automations from natural language descriptions.",
       tradeoff: "Expensive for multi-step or high-volume workflows; less flexible than Make or n8n for complex logic.",
@@ -1746,13 +1406,9 @@ const AI_TOOLS_DB = {
   ],
   data: [
     {
-      name: "Julius AI",
-      icon: "📊",
-      color: "#10b981",
+      name: "Julius AI", icon: "📊", color: "#10b981",
       tagline: "Conversational data analysis and visualization",
-      pricing: "Free / From $20/mo",
-      type: "Data AI",
-      matchTags: ["data", "analysis", "csv", "charts", "statistics", "excel"],
+      pricing: "Free / From $20/mo", type: "Data AI",
       url: "https://julius.ai",
       description: "Upload CSVs, Excel files, or databases and analyze them through conversation. Creates charts, runs statistics, and explains insights without writing code.",
       tradeoff: "Less powerful than writing actual Python; limited to supported file formats; not suited for real-time or streaming data.",
@@ -1764,13 +1420,9 @@ const AI_TOOLS_DB = {
       ]
     },
     {
-      name: "ChatGPT Advanced Data Analysis",
-      icon: "🐍",
-      color: "#10a37f",
+      name: "ChatGPT Advanced Data Analysis", icon: "🐍", color: "#10a37f",
       tagline: "Code-executing data analysis inside ChatGPT",
-      pricing: "Included in ChatGPT Plus",
-      type: "Data AI",
-      matchTags: ["data", "python", "analysis", "code", "visualization", "cleaning"],
+      pricing: "Included in ChatGPT Plus", type: "Data AI",
       url: "https://chat.openai.com",
       description: "ChatGPT Plus includes Advanced Data Analysis (formerly Code Interpreter) — upload files and let GPT-4 write and execute Python to analyze and visualize your data.",
       tradeoff: "Session-based — code and files don't persist after the chat ends; requires ChatGPT Plus subscription.",
@@ -1785,7 +1437,7 @@ const AI_TOOLS_DB = {
 };
 
 // ============================================================
-// CONVERSATION ENGINE
+// SYSTEM PROMPT
 // ============================================================
 const SYSTEM_PROMPT = `You are NEXUS, a strictly neutral AI Tool Intelligence System. You match users with best-fit AI tools and generate precise, optimised prompts for each tool based on the user's exact task and context.
 
@@ -1848,16 +1500,6 @@ Analyse all requirements objectively. Output ONE of these two JSON formats:
           "prompt": "A follow-up prompt to refine or improve the first output."
         }
       ]
-    },
-    {
-      "tool": "Second Tool",
-      "prompts": [
-        {
-          "label": "Primary Task Prompt",
-          "purpose": "What this achieves with this specific tool",
-          "prompt": "Optimised prompt tailored for this tool's strengths and interface."
-        }
-      ]
     }
   ],
   "action_steps": [
@@ -1901,7 +1543,7 @@ Analyse all requirements objectively. Output ONE of these two JSON formats:
       "description": "What needs to be done",
       "tool": "Exact Tool Name",
       "output": "What this step produces",
-      "connects_to": 3,
+      "connects_to": null,
       "fit_score": 87,
       "prompts": [
         {
@@ -1910,29 +1552,12 @@ Analyse all requirements objectively. Output ONE of these two JSON formats:
           "prompt": "Optimised prompt for step 2. Reference that input comes from step 1 output where relevant."
         }
       ]
-    },
-    {
-      "step": 3,
-      "subtask": "Short subtask name",
-      "description": "What needs to be done",
-      "tool": "Exact Tool Name",
-      "output": "Final output description",
-      "connects_to": null,
-      "fit_score": 84,
-      "prompts": [
-        {
-          "label": "Primary Prompt",
-          "purpose": "Purpose for final step",
-          "prompt": "Optimised final step prompt, referencing inputs from previous steps."
-        }
-      ]
     }
   ],
   "action_steps": [
     { "step": 1, "action": "Open [Tool Name] → paste the prompt shown below into the input field → run it", "tool": "Tool Name", "duration": "~X min" },
     { "step": 2, "action": "Copy the output from Step 1 → open [next Tool] → paste the prompt below and include the Step 1 output", "tool": "Tool Name", "duration": "~X min" },
-    { "step": 3, "action": "Use the prompt below in [Tool] → verify the output meets your goal → refine if needed", "tool": "Tool Name", "duration": "~X min" },
-    { "step": 4, "action": "Final review → export or publish as needed", "tool": "Tool Name", "duration": "~X min" }
+    { "step": 3, "action": "Final review → export or publish as needed", "tool": "Tool Name", "duration": "~X min" }
   ],
   "orchestration": "One sentence explaining how tools connect and data flows between them",
   "reasoning": "One factual sentence on why this pipeline was chosen"
@@ -1942,8 +1567,8 @@ Analyse all requirements objectively. Output ONE of these two JSON formats:
 PROMPT QUALITY RULES (critical):
 - Every prompt must be immediately copy-pasteable and usable without modification
 - Use all context gathered: task type, budget, skill level, domain specifics
-- For image tools (Midjourney, DALL-E, Stable Diffusion): include style, lighting, composition, aspect ratio, negative prompts
-- For LLMs (Claude, ChatGPT): include role, task, format, constraints, tone, output length
+- For image tools: include style, lighting, composition, aspect ratio, negative prompts
+- For LLMs: include role, task, format, constraints, tone, output length
 - For code tools: include language, framework, style, what to avoid, expected structure
 - For voice tools: include tone, pace, emotion, audience
 - For video tools: include camera angle, motion, lighting, scene description, duration
@@ -1965,7 +1590,7 @@ SCORING (requirement-fit only, 0-100):
 
 AVAILABLE TOOLS (exact names only):
 Writing: Claude (Anthropic), ChatGPT (OpenAI), Jasper AI, Notion AI, Copy.ai, Writesonic
-Coding: GitHub Copilot, Cursor, Claude (Anthropic), Replit AI, Tabnine, Codeium
+Coding: GitHub Copilot, Cursor, Claude (Anthropic), Replit AI, Codeium, Tabnine
 Image: Midjourney, DALL-E 3 (OpenAI), Stable Diffusion (Auto1111), Adobe Firefly, Leonardo AI, Ideogram
 Research: Perplexity AI, Elicit, NotebookLM (Google), Consensus, Semantic Scholar
 Voice: ElevenLabs, Suno AI, Murf AI, Speechify
@@ -1973,25 +1598,43 @@ Video: Runway ML, Sora (OpenAI), HeyGen, Kling AI, Pika Labs
 Automation: Make (Integromat), n8n, Zapier, ActivePieces, Pipedream
 Data: Julius AI, ChatGPT Advanced Data Analysis, Akkio, Obviously AI`;
 
+// ============================================================
+// CONVERSATION STATE
+// ============================================================
 let messages = [];
 let isThinking = false;
 
-async function callClaude(userMessage) {
+// ============================================================
+// GROQ API CALL — Native OpenAI format, zero conversion
+// ============================================================
+async function callGroq(userMessage) {
   messages.push({ role: "user", content: userMessage });
+
+  // System prompt goes as first message in the array
+  const groqMessages = [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...messages
+  ];
 
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4000,
-      system: SYSTEM_PROMPT,
-      messages: messages
+      model: "llama-3.3-70b-versatile",
+      messages: groqMessages,
+      max_tokens: 8000,
+      temperature: 0.7,
+      top_p: 0.9
     })
   });
 
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(JSON.stringify(err));
+  }
+
   const data = await response.json();
-  const reply = data.content[0].text;
+  const reply = data.choices[0].message.content;
   messages.push({ role: "assistant", content: reply });
   return reply;
 }
@@ -2000,7 +1643,6 @@ async function callClaude(userMessage) {
 // UI FUNCTIONS
 // ============================================================
 function formatBullets(text) {
-  // Convert • bullets into styled HTML list items
   const lines = text.split('\n');
   let html = '';
   lines.forEach(line => {
@@ -2018,14 +1660,11 @@ function formatBullets(text) {
 function addMessage(role, content, options = null) {
   const messagesEl = document.getElementById('messages');
   const uid = Date.now() + Math.random();
-
   const msg = document.createElement('div');
   msg.className = 'message';
   msg.style.animationDelay = '0ms';
-
   const isAI = role === 'ai';
   const formattedContent = isAI ? formatBullets(content) : content;
-
   msg.innerHTML = `
     <div class="msg-avatar ${isAI ? 'ai' : 'user'}">${isAI ? 'NX' : 'U'}</div>
     <div class="msg-bubble">
@@ -2034,7 +1673,6 @@ function addMessage(role, content, options = null) {
       ${options ? buildOptionsHTML(options, uid) : ''}
     </div>
   `;
-
   messagesEl.appendChild(msg);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
@@ -2043,7 +1681,6 @@ function buildOptionsHTML(options, uid) {
   const btns = options.map(o =>
     `<button class="option-btn" onclick="selectOption(this, '${o.replace(/'/g, "\\'")}')">${o}</button>`
   ).join('');
-  // Always add "Other" at the end
   const otherId = `other-input-${uid}`;
   const otherBtn = `<button class="option-btn other-btn" onclick="toggleOther(this, '${otherId}')">✎ Other</button>`;
   const otherInput = `
@@ -2055,21 +1692,14 @@ function buildOptionsHTML(options, uid) {
 }
 
 function toggleOther(btn, inputId) {
-  // Deselect other buttons
   btn.closest('.options-grid').querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   const row = document.getElementById(inputId);
-  if (row) {
-    row.style.display = 'flex';
-    row.querySelector('input').focus();
-  }
+  if (row) { row.style.display = 'flex'; row.querySelector('input').focus(); }
 }
 
 function otherKeydown(e, input) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    sendOther(input.nextElementSibling);
-  }
+  if (e.key === 'Enter') { e.preventDefault(); sendOther(input.nextElementSibling); }
 }
 
 function sendOther(btn) {
@@ -2081,14 +1711,11 @@ function sendOther(btn) {
 }
 
 function selectOption(btn, value) {
-  // Hide any open Other input rows in same message
   const grid = btn.closest('.options-grid');
   grid.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
-  // Hide other input if visible
   const otherRow = grid.parentElement.querySelector('.other-input-row');
   if (otherRow) otherRow.style.display = 'none';
-
   setTimeout(() => {
     document.getElementById('userInput').value = value;
     sendMessage();
@@ -2134,11 +1761,7 @@ function parseAndRenderTools(reply) {
   if (!jsonMatch) return null;
   try {
     const data = JSON.parse(jsonMatch[1]);
-    if (data.mode === 'pipeline') {
-      renderPipeline(data);
-    } else {
-      renderSingle(data);
-    }
+    if (data.mode === 'pipeline') { renderPipeline(data); } else { renderSingle(data); }
     return stripMarkers(reply);
   } catch(e) { return null; }
 }
@@ -2158,11 +1781,8 @@ function renderSingle(data) {
   banner.innerHTML = `<span class="nb-icon">⚖</span><span>Recommendations based <strong>solely on your stated requirements</strong>. No tool is sponsored or preferred. Fit scores reflect requirement match only.</span>`;
   panel.appendChild(banner);
 
-  // Build promptMap: { toolName -> [{label, purpose, prompt}] } — full objects for inline display
   const promptMap = {};
-  (data.tool_prompts || []).forEach(tp => {
-    promptMap[tp.tool] = tp.prompts || [];
-  });
+  (data.tool_prompts || []).forEach(tp => { promptMap[tp.tool] = tp.prompts || []; });
 
   const allTools = Object.values(AI_TOOLS_DB).flat();
   data.tools.forEach((toolName, index) => {
@@ -2191,25 +1811,21 @@ function renderPipeline(data) {
   panel.innerHTML = '';
   const allTools = Object.values(AI_TOOLS_DB).flat();
 
-  // Header
   const header = document.createElement('div');
   header.className = 'results-header';
   header.textContent = `AI PIPELINE — ${data.pipeline.length} SUBTASKS`;
   panel.appendChild(header);
 
-  // Summary banner
   const sumBanner = document.createElement('div');
   sumBanner.className = 'pipeline-summary-banner';
   sumBanner.innerHTML = `<span class="psb-icon">◈</span><div><div class="psb-title">Multi-Tool Workflow Detected</div><div class="psb-text">${data.summary}</div></div>`;
   panel.appendChild(sumBanner);
 
-  // Neutrality note
   const banner = document.createElement('div');
   banner.className = 'neutrality-banner';
   banner.innerHTML = `<span class="nb-icon">⚖</span><span>Each subtask is assigned the <strong>best-fit tool based on requirements</strong> only — no brand bias. Tools are selected independently per subtask.</span>`;
   panel.appendChild(banner);
 
-  // Pipeline visual
   const pipelineEl = document.createElement('div');
   pipelineEl.className = 'pipeline-container';
 
@@ -2220,7 +1836,6 @@ function renderPipeline(data) {
     const color = toolData ? toolData.color : '#7c5cfc';
     const pricing = toolData ? toolData.pricing : '';
 
-    // Step node
     const node = document.createElement('div');
     node.className = 'pipeline-node';
     node.style.animationDelay = `${idx * 150}ms`;
@@ -2258,9 +1873,7 @@ function renderPipeline(data) {
     `;
     pipelineEl.appendChild(node);
 
-    // Connector arrow between steps
     if (step.connects_to !== null && idx < data.pipeline.length - 1) {
-      const nextStep = data.pipeline.find(s => s.step === step.connects_to);
       const connector = document.createElement('div');
       connector.className = 'pipeline-connector';
       connector.innerHTML = `
@@ -2274,7 +1887,6 @@ function renderPipeline(data) {
 
   panel.appendChild(pipelineEl);
 
-  // Orchestration note
   const orchNote = document.createElement('div');
   orchNote.className = 'orchestration-note';
   orchNote.innerHTML = `<span class="orch-icon">⟳</span><div><strong>Orchestration:</strong> ${data.orchestration}</div>`;
@@ -2285,13 +1897,12 @@ function renderPipeline(data) {
   reasonNote.textContent = `✦ ${data.reasoning}`;
   panel.appendChild(reasonNote);
 
-  // Action Steps — build promptMap by step number AND tool name, full prompt objects
   if (data.action_steps && data.action_steps.length) {
     const promptMap = {};
     data.pipeline.forEach(step => {
       if (step.prompts && step.prompts.length) {
-        promptMap[step.step] = step.prompts;   // keyed by step number (integer)
-        promptMap[step.tool] = step.prompts;   // keyed by tool name (string)
+        promptMap[step.step] = step.prompts;
+        promptMap[step.tool] = step.prompts;
       }
     });
     panel.appendChild(buildActionSteps(data.action_steps, promptMap));
@@ -2300,11 +1911,10 @@ function renderPipeline(data) {
 
 function togglePnGuide(el) {
   el.classList.toggle('open');
-  const steps = el.nextElementSibling;
-  steps.classList.toggle('visible');
+  el.nextElementSibling.classList.toggle('visible');
 }
 
-// ── BUILD PROMPT SECTION HTML ─────────────────────────────────
+// ── BUILD PROMPT SECTION ──────────────────────────────────────
 function buildPromptSection(prompts, toolName) {
   const uid = 'ps_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
   const cards = prompts.map((p, i) => {
@@ -2338,7 +1948,6 @@ function buildPromptSection(prompts, toolName) {
 
 // ── BUILD ACTION STEPS ────────────────────────────────────────
 function buildActionSteps(steps, promptMap) {
-  // promptMap = { stepNum_or_toolName: [{label, prompt}] } — full prompt objects
   const el = document.createElement('div');
   el.className = 'action-steps-section';
 
@@ -2348,10 +1957,8 @@ function buildActionSteps(steps, promptMap) {
   }, 0);
 
   const stepsHtml = steps.map(s => {
-    // Look up prompts by step number first, then by tool name
     const prompts = (promptMap && (promptMap[s.step] || promptMap[s.tool])) || [];
 
-    // Render each prompt as an inline copyable block
     const inlinePrompts = prompts.map((p, i) => {
       const inlineId = `inline_${s.step}_${i}_${Date.now().toString(36)}`;
       return `
@@ -2431,13 +2038,9 @@ function copyPrompt(btn, id) {
     btn.classList.add('copied');
     setTimeout(() => { btn.textContent = '⎘ Copy'; btn.classList.remove('copied'); }, 2000);
   }).catch(() => {
-    // Fallback
     const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
     btn.textContent = '✓ Copied';
     btn.classList.add('copied');
     setTimeout(() => { btn.textContent = '⎘ Copy'; btn.classList.remove('copied'); }, 2000);
@@ -2447,11 +2050,8 @@ function copyPrompt(btn, id) {
 function createToolCard(tool, score, isTop, prompts = null) {
   const card = document.createElement('div');
   card.className = `tool-card ${isTop ? 'top-pick' : ''}`;
-
   const circumference = 2 * Math.PI * 18;
   const offset = circumference - (score / 100) * circumference;
-
-  // Score color: green >80, amber 60-80, red <60
   const scoreColor = score >= 80 ? '#00d4aa' : score >= 60 ? '#f59e0b' : '#ff6b6b';
 
   card.innerHTML = `
@@ -2497,14 +2097,12 @@ function createToolCard(tool, score, isTop, prompts = null) {
     </div>
     ${prompts && prompts.length ? buildPromptSection(prompts, tool.name) : ''}
   `;
-
   return card;
 }
 
 function toggleGuide(btn) {
   btn.classList.toggle('open');
-  const steps = btn.nextElementSibling;
-  steps.classList.toggle('visible');
+  btn.nextElementSibling.classList.toggle('visible');
 }
 
 // ============================================================
@@ -2519,42 +2117,35 @@ async function sendMessage() {
   input.value = '';
   input.style.height = 'auto';
 
-  // Disable all existing option buttons
   document.querySelectorAll('.option-btn').forEach(b => { b.disabled = true; b.style.opacity = '0.4'; });
 
   addMessage('user', text);
-
   isThinking = true;
   showTyping();
 
   try {
-    const reply = await callClaude(text);
+    const reply = await callGroq(text);
     hideTyping();
 
-    // Check if it's a final recommendation
     const toolResult = parseAndRenderTools(reply);
     if (toolResult !== null) {
       addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded →');
     } else {
-      // Extract options from Claude's structured OPTIONS block
       const options = parseOptions(reply);
       const cleanText = stripMarkers(reply);
       addMessage('ai', cleanText, options);
     }
-
   } catch (e) {
     hideTyping();
     addMessage('ai', '• Connection error. Please try again.');
+    console.error('Groq error:', e);
   }
 
   isThinking = false;
 }
 
 function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
 
 function autoResize(el) {
@@ -2572,12 +2163,11 @@ function resetApp() {
       <div class="empty-sub">Describe your task in the chat and NEXUS will identify the best AI tools for your specific needs.</div>
     </div>
   `;
-  // Re-add welcome message
   setTimeout(addWelcomeMessage, 100);
 }
 
 function addWelcomeMessage() {
-  addMessage('ai', `• Welcome — I'm <strong>NEXUS</strong>, your AI Tool Intelligence System.\n• I know 200+ AI tools across writing, coding, images, research, voice, video, automation, and data.\n• Tell me what task you want to accomplish, and I'll find the perfect tool for you.`);
+  addMessage('ai', `• Welcome — I'm <strong>NEXUS</strong>, your AI Tool Intelligence System.\n• Powered by Llama 3.3 70B via Groq for ultra-fast responses.\n• I know 200+ AI tools across writing, coding, images, research, voice, video, automation, and data.\n• Tell me what task you want to accomplish, and I'll find the perfect tool for you.`);
 }
 
 // ============================================================
