@@ -4,27 +4,53 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NEXUS — AI Tool Intelligence</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Courier+Prime:wght@400;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --surface: #111118;
-    --surface2: #1a1a24;
-    --border: #2a2a3a;
-    --accent: #7c5cfc;
-    --accent2: #00d4aa;
-    --accent3: #ff6b6b;
-    --text: #e8e8f0;
-    --muted: #6b6b80;
-    --highlight: #f0e6ff;
-  }
+ :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #1a1a24;
+      --border: #2a2a3a;
+      --accent: #7c5cfc;
+      --accent2: #00d4aa;
+      --accent3: #ff6b6b;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --highlight: #f0e6ff;
+    }
+  
+    body.light-mode {
+      --bg: #f5f5f0;
+      --surface: #ffffff;
+      --surface2: #ededea;
+      --border: #d0d0c8;
+      --accent: #6b4df0;
+      --accent2: #00a886;
+      --accent3: #e05555;
+      --text: #1a1a2e;
+      --muted: #6b6b80;
+      --highlight: #2a1a5e;
+    }
+  
+    body.light-mode body::before {
+      background: radial-gradient(ellipse, rgba(107,77,240,0.06) 0%, transparent 70%);
+    }
+  
+    body.light-mode .msg-content.ai-msg {
+      background: #ffffff;
+      border-color: #d0d0c8;
+    }
+  
+    body.light-mode header {
+      background: rgba(245,245,240,0.9);
+    }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Times New Roman', Times, serif;
     min-height: 100vh;
     overflow-x: hidden;
   }
@@ -66,7 +92,7 @@
   }
 
   .logo {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Times New Roman', Times, serif;
     font-weight: 800;
     font-size: 1.3rem;
     letter-spacing: 0.15em;
@@ -992,6 +1018,24 @@
     cursor: pointer;
     transition: all 0.2s;
   }
+  .theme-toggle-btn {
+    font-size: 1.1rem;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+  .theme-toggle-btn:hover {
+    border-color: var(--accent);
+    background: rgba(124,92,252,0.1);
+    transform: rotate(20deg);
+  }
   .reset-btn:hover { border-color: var(--accent3); color: var(--accent3); }
 
   .highlight-rank {
@@ -1025,7 +1069,10 @@
     NEXUS
   </div>
   <div class="header-tag">AI Tool Intelligence System</div>
+  <div style="display:flex;gap:0.6rem;align-items:center;">
+  <button class="theme-toggle-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
   <button class="reset-btn" onclick="resetApp()">↺ Reset</button>
+</div>
 </header>
 
 <div class="app-container">
@@ -2169,7 +2216,33 @@ function resetApp() {
 function addWelcomeMessage() {
   addMessage('ai', `• Welcome — I'm <strong>NEXUS</strong>, your AI Tool Intelligence System.\n• Powered by Llama 3.3 70B via Groq for ultra-fast responses.\n• I know 200+ AI tools across writing, coding, images, research, voice, video, automation, and data.\n• Tell me what task you want to accomplish, and I'll find the perfect tool for you.`);
 }
+// ============================================================
+// THEME TOGGLE
+// ============================================================
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById('themeBtn');
+  body.classList.toggle('light-mode');
+  if (body.classList.contains('light-mode')) {
+    btn.textContent = '☀️';
+    localStorage.setItem('nexus-theme', 'light');
+  } else {
+    btn.textContent = '🌙';
+    localStorage.setItem('nexus-theme', 'dark');
+  }
+}
 
+// Remember theme preference across sessions
+(function() {
+  const saved = localStorage.getItem('nexus-theme');
+  if (saved === 'light') {
+    document.body.classList.add('light-mode');
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('themeBtn');
+      if (btn) btn.textContent = '☀️';
+    });
+  }
+})();
 // ============================================================
 // INIT
 // ============================================================
