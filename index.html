@@ -5,10 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NEXUS — AI Tool Intelligence</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<!-- Supabase JS SDK — needed for auth only -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ── THEME VARIABLES ─────────────────────────────────────── */
   :root {
     --bg: #0a0a0f;
     --surface: #111118;
@@ -34,431 +32,107 @@
     --muted: #3a3a50;
     --highlight: #1a0a4e;
   }
-body.light-mode .tool-desc       { color: #444460; }
-body.light-mode .pn-description  { color: #444460; }
-body.light-mode .tradeoff-text   { color: #7a3333; }
-body.light-mode .bullet-plain    { color: #3a3a50; }
-body.light-mode .step-text       { color: #0d0d1a; }
-body.light-mode .prompt-text     { color: #2a2010; }
-body.light-mode .ipb-text        { color: #2a2010; }
-body.light-mode .action-step-action { color: #0d0d1a; }
-body.light-mode .psb-text        { color: #0d0d1a; }
-body.light-mode .orchestration-note { color: #0d0d1a; }
-body.light-mode .pn-output-text  { color: #005a48; }
-body.light-mode .score-ring .score-num { color: #007a62; }
+  body.light-mode .tool-desc            { color: #444460; }
+  body.light-mode .pn-description       { color: #444460; }
+  body.light-mode .tradeoff-text        { color: #7a3333; }
+  body.light-mode .bullet-plain         { color: #3a3a50; }
+  body.light-mode .step-text            { color: #0d0d1a; }
+  body.light-mode .prompt-text          { color: #2a2010; }
+  body.light-mode .ipb-text             { color: #2a2010; }
+  body.light-mode .action-step-action   { color: #0d0d1a; }
+  body.light-mode .psb-text             { color: #0d0d1a; }
+  body.light-mode .orchestration-note   { color: #0d0d1a; }
+  body.light-mode .pn-output-text       { color: #005a48; }
+  body.light-mode .score-ring .score-num{ color: #007a62; }
+  body.light-mode header                { background: rgba(245,245,240,0.92); }
+  body.light-mode .msg-content.ai-msg   { background: #ffffff; border-color: #d0d0c8; }
+  body.light-mode .input-area           { background: rgba(245,245,240,0.8); }
+  body.light-mode .auth-modal-box       { background: #ffffff; border-color: #d0d0c8; }
 
-  body.light-mode header        { background: rgba(245,245,240,0.92); }
-  body.light-mode .msg-content.ai-msg { background: #ffffff; border-color: #d0d0c8; }
-  body.light-mode .input-area   { background: rgba(245,245,240,0.8); }
-  body.light-mode .auth-modal-box { background: #ffffff; border-color: #d0d0c8; }
-
-  /* ── RESET & BASE ────────────────────────────────────────── */
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
+  body::before { content: ''; position: fixed; top: -40%; left: -20%; width: 70%; height: 70%; background: radial-gradient(ellipse, rgba(124,92,252,0.08) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+  body::after  { content: ''; position: fixed; bottom: -30%; right: -10%; width: 60%; height: 60%; background: radial-gradient(ellipse, rgba(0,212,170,0.06) 0%, transparent 70%); pointer-events: none; z-index: 0; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    min-height: 100vh;
-    overflow-x: hidden;
-    transition: background 0.3s, color 0.3s;
-  }
-
-  body::before {
-    content: '';
-    position: fixed;
-    top: -40%; left: -20%;
-    width: 70%; height: 70%;
-    background: radial-gradient(ellipse, rgba(124,92,252,0.08) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  body::after {
-    content: '';
-    position: fixed;
-    bottom: -30%; right: -10%;
-    width: 60%; height: 60%;
-    background: radial-gradient(ellipse, rgba(0,212,170,0.06) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* ── HEADER ──────────────────────────────────────────────── */
-  header {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
-    padding: 1.2rem 2.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-    background: rgba(10,10,15,0.85);
-    backdrop-filter: blur(20px);
-    transition: background 0.3s;
-  }
-
-  .logo {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.3rem;
-    letter-spacing: 0.15em;
-    color: var(--highlight);
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-  }
-
-  .logo-dot {
-    width: 8px; height: 8px;
-    background: var(--accent2);
-    border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.5; transform: scale(0.7); }
-  }
-
-  .header-tag {
-    font-size: 0.65rem;
-    letter-spacing: 0.2em;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-
-  .header-controls {
-    display: flex;
-    gap: 0.6rem;
-    align-items: center;
-  }
-
-  .theme-toggle-btn {
-    font-size: 1rem;
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    background: transparent;
-    border: 1px solid var(--border);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s;
-    flex-shrink: 0;
-  }
-  .theme-toggle-btn:hover {
-    border-color: var(--accent);
-    background: rgba(124,92,252,0.1);
-    transform: rotate(20deg);
-  }
-
-  /* Auth button in header */
-  .auth-header-btn {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 0.35rem 0.85rem;
-    border-radius: 6px;
-    background: rgba(124,92,252,0.15);
-    border: 1px solid rgba(124,92,252,0.4);
-    color: var(--accent);
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
+  header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 1.2rem 2.5rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(10,10,15,0.85); backdrop-filter: blur(20px); transition: background 0.3s; }
+  .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; letter-spacing: 0.15em; color: var(--highlight); display: flex; align-items: center; gap: 0.6rem; }
+  .logo-dot { width: 8px; height: 8px; background: var(--accent2); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.7); } }
+  .header-tag { font-size: 0.65rem; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+  .header-controls { display: flex; gap: 0.6rem; align-items: center; }
+  .theme-toggle-btn { font-size: 1rem; width: 36px; height: 36px; border-radius: 50%; background: transparent; border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; flex-shrink: 0; }
+  .theme-toggle-btn:hover { border-color: var(--accent); background: rgba(124,92,252,0.1); transform: rotate(20deg); }
+  .auth-header-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.35rem 0.85rem; border-radius: 6px; background: rgba(124,92,252,0.15); border: 1px solid rgba(124,92,252,0.4); color: var(--accent); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
   .auth-header-btn:hover { background: rgba(124,92,252,0.25); }
-  .auth-header-btn.signed-in {
-    background: rgba(0,212,170,0.1);
-    border-color: rgba(0,212,170,0.35);
-    color: var(--accent2);
-  }
-
-  .reset-btn {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    padding: 0.3rem 0.7rem;
-    border-radius: 6px;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
+  .auth-header-btn.signed-in { background: rgba(0,212,170,0.1); border-color: rgba(0,212,170,0.35); color: var(--accent2); }
+  .reset-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.3rem 0.7rem; border-radius: 6px; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all 0.2s; }
   .reset-btn:hover { border-color: var(--accent3); color: var(--accent3); }
 
-  /* ── LAYOUT ──────────────────────────────────────────────── */
-  .app-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    min-height: 100vh;
-    padding-top: 65px;
-    position: relative;
-    z-index: 1;
-  }
-
-  /* ── CHAT PANEL ──────────────────────────────────────────── */
-  .chat-panel {
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid var(--border);
-    height: calc(100vh - 65px);
-    position: sticky;
-    top: 65px;
-  }
-
-  .chat-header {
-    padding: 1.5rem 2rem;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .chat-title {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.9rem;
-    letter-spacing: 0.1em;
-    color: var(--highlight);
-  }
-
-  .status-badge {
-    font-size: 0.6rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    padding: 0.2rem 0.6rem;
-    border-radius: 20px;
-    background: rgba(0,212,170,0.1);
-    border: 1px solid rgba(0,212,170,0.3);
-    color: var(--accent2);
-  }
-
-  .messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1.5rem 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-
-  .message {
-    display: flex;
-    gap: 0.8rem;
-    animation: msgIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
+  .app-container { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; padding-top: 65px; position: relative; z-index: 1; }
+  .chat-panel { display: flex; flex-direction: column; border-right: 1px solid var(--border); height: calc(100vh - 65px); position: sticky; top: 65px; }
+  .chat-header { padding: 1.5rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+  .chat-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.1em; color: var(--highlight); }
+  .status-badge { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 20px; background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.3); color: var(--accent2); }
+  .messages { flex: 1; overflow-y: auto; padding: 1.5rem 2rem; display: flex; flex-direction: column; gap: 1.2rem; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .message { display: flex; gap: 0.8rem; animation: msgIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(10px); }
   @keyframes msgIn { to { opacity: 1; transform: translateY(0); } }
-
-  .msg-avatar {
-    width: 30px; height: 30px;
-    border-radius: 8px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    font-weight: 700;
-    margin-top: 2px;
-  }
+  .msg-avatar { width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; margin-top: 2px; }
   .msg-avatar.ai   { background: linear-gradient(135deg, var(--accent), #a78bfa); color: white; }
   .msg-avatar.user { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
-
   .msg-bubble { flex: 1; }
-  .msg-sender { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+  .msg-sender  { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
   .msg-content { font-size: 0.85rem; line-height: 1.7; color: var(--text); }
+  .msg-content.ai-msg  { background: var(--surface); border: 1px solid var(--border); border-radius: 0 12px 12px 12px; padding: 0.9rem 1.1rem; }
+  .msg-content.user-msg{ background: rgba(124,92,252,0.1); border: 1px solid rgba(124,92,252,0.2); border-radius: 12px 0 12px 12px; padding: 0.9rem 1.1rem; color: var(--highlight); }
 
-  .msg-content.ai-msg {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0 12px 12px 12px;
-    padding: 0.9rem 1.1rem;
-  }
-
-  .msg-content.user-msg {
-    background: rgba(124,92,252,0.1);
-    border: 1px solid rgba(124,92,252,0.2);
-    border-radius: 12px 0 12px 12px;
-    padding: 0.9rem 1.1rem;
-    color: var(--highlight);
-  }
-
-  /* ── OPTION BUTTONS ──────────────────────────────────────── */
   .options-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
-
-  .option-btn {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    padding: 0.45rem 0.9rem;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.03em;
-  }
+  .option-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; padding: 0.45rem 0.9rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); cursor: pointer; transition: all 0.2s; letter-spacing: 0.03em; }
   .option-btn:hover    { border-color: var(--accent); color: var(--accent); background: rgba(124,92,252,0.08); }
   .option-btn.selected { border-color: var(--accent2); color: var(--accent2); background: rgba(0,212,170,0.08); }
-  .other-btn           { border-color: rgba(124,92,252,0.35) !important; color: var(--accent) !important; }
-
+  .other-btn { border-color: rgba(124,92,252,0.35) !important; color: var(--accent) !important; }
   .other-input-row { display: flex; gap: 0.5rem; margin-top: 0.6rem; align-items: center; }
-  .other-text-input {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--accent);
-    border-radius: 7px;
-    padding: 0.45rem 0.8rem;
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.78rem;
-    outline: none;
-  }
+  .other-text-input { flex: 1; background: var(--surface2); border: 1px solid var(--accent); border-radius: 7px; padding: 0.45rem 0.8rem; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; outline: none; }
   .other-text-input::placeholder { color: var(--muted); }
-  .other-send-btn {
-    background: var(--accent);
-    border: none;
-    border-radius: 7px;
-    color: white;
-    font-size: 0.9rem;
-    width: 32px; height: 32px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: background 0.2s;
-    flex-shrink: 0;
-  }
+  .other-send-btn { background: var(--accent); border: none; border-radius: 7px; color: white; font-size: 0.9rem; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0; }
   .other-send-btn:hover { background: #9b7afe; }
 
-  /* ── INPUT AREA ──────────────────────────────────────────── */
-  .input-area {
-    padding: 1.2rem 2rem;
-    border-top: 1px solid var(--border);
-    background: rgba(10,10,15,0.5);
-  }
-
+  .input-area { padding: 1.2rem 2rem; border-top: 1px solid var(--border); background: rgba(10,10,15,0.5); }
   .input-row { display: flex; gap: 0.8rem; align-items: flex-end; }
-
-  .chat-input {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 0.8rem 1rem;
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.82rem;
-    resize: none;
-    outline: none;
-    min-height: 44px;
-    max-height: 120px;
-    transition: border-color 0.2s;
-    line-height: 1.5;
-  }
+  .chat-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; resize: none; outline: none; min-height: 44px; max-height: 120px; transition: border-color 0.2s; line-height: 1.5; }
   .chat-input:focus        { border-color: var(--accent); }
   .chat-input::placeholder { color: var(--muted); }
-
-  .send-btn {
-    width: 44px; height: 44px;
-    background: var(--accent);
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    flex-shrink: 0;
-  }
+  .send-btn { width: 44px; height: 44px; background: var(--accent); border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
   .send-btn:hover  { background: #9b7afe; transform: scale(1.05); }
   .send-btn:active { transform: scale(0.97); }
   .send-btn svg    { width: 16px; height: 16px; color: white; }
 
-  /* ── RESULTS PANEL ───────────────────────────────────────── */
-  .results-panel {
-    height: calc(100vh - 65px);
-    overflow-y: auto;
-    padding: 2rem;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-
-  .results-header {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.75rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
+  .results-panel { height: calc(100vh - 65px); overflow-y: auto; padding: 2rem; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .results-header { font-family: 'Syne', sans-serif; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; }
   .results-header::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-  /* ── EMPTY STATE ─────────────────────────────────────────── */
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    text-align: center;
-    gap: 1rem;
-    padding: 3rem;
-  }
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; gap: 1rem; padding: 3rem; }
   .empty-icon  { font-size: 3rem; opacity: 0.3; }
   .empty-title { font-family: 'Syne', sans-serif; font-size: 1rem; color: var(--muted); font-weight: 600; letter-spacing: 0.05em; }
   .empty-sub   { font-size: 0.75rem; color: var(--muted); opacity: 0.6; line-height: 1.7; max-width: 280px; }
 
-  /* ── TYPING INDICATOR ────────────────────────────────────── */
-  .typing {
-    display: flex;
-    gap: 4px;
-    padding: 0.6rem 0.8rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0 12px 12px 12px;
-    width: fit-content;
-  }
+  .typing { display: flex; gap: 4px; padding: 0.6rem 0.8rem; background: var(--surface); border: 1px solid var(--border); border-radius: 0 12px 12px 12px; width: fit-content; }
   .typing span { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: blink 1.2s ease-in-out infinite; }
   .typing span:nth-child(2) { animation-delay: 0.2s; }
   .typing span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes blink { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
 
-  /* ── BULLET FORMATTING ───────────────────────────────────── */
   .bullet-item  { display: flex; gap: 0.5rem; align-items: flex-start; margin-bottom: 0.45rem; font-size: 0.83rem; line-height: 1.55; }
   .bullet-dot   { color: var(--accent2); font-size: 0.65rem; margin-top: 0.25rem; flex-shrink: 0; }
   .bullet-plain { font-size: 0.83rem; line-height: 1.55; margin-bottom: 0.3rem; color: var(--muted); }
 
-  /* ── TOOL CARD ───────────────────────────────────────────── */
-  .tool-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    margin-bottom: 1.5rem;
-    overflow: hidden;
-    animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: border-color 0.3s;
-  }
+  .tool-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 1.5rem; overflow: hidden; animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); transition: border-color 0.3s; }
   .tool-card:hover    { border-color: rgba(124,92,252,0.4); }
   .tool-card.top-pick { border-color: rgba(124,92,252,0.35); position: relative; }
   @keyframes cardIn   { to { opacity: 1; transform: translateY(0); } }
-
   .highlight-rank { position: absolute; top: -1px; left: -1px; right: -1px; height: 3px; border-radius: 16px 16px 0 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
   .tool-card-header { padding: 1.4rem 1.6rem 1rem; display: flex; align-items: flex-start; gap: 1.2rem; }
-  .tool-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
-  .tool-meta { flex: 1; }
+  .tool-icon    { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+  .tool-meta    { flex: 1; }
   .top-pick-label { font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent2); font-weight: 700; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.3rem; }
   .tool-name    { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem; color: var(--highlight); margin-bottom: 0.3rem; }
   .tool-tagline { font-size: 0.75rem; color: var(--muted); line-height: 1.5; font-family: 'Instrument Serif', serif; font-style: italic; }
@@ -467,18 +141,14 @@ body.light-mode .score-ring .score-num { color: #007a62; }
   .badge-match  { background: rgba(0,212,170,0.12); border: 1px solid rgba(0,212,170,0.3); color: var(--accent2); }
   .badge-price  { background: rgba(124,92,252,0.12); border: 1px solid rgba(124,92,252,0.3); color: #a78bfa; }
   .badge-type   { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.25); color: #ff9999; }
-
-  .score-ring { width: 52px; height: 52px; position: relative; flex-shrink: 0; }
+  .score-ring   { width: 52px; height: 52px; position: relative; flex-shrink: 0; }
   .score-ring svg { transform: rotate(-90deg); }
   .score-ring .score-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.75rem; color: var(--accent2); }
-
-  .tool-desc { padding: 0 1.6rem 1rem; font-size: 0.8rem; line-height: 1.7; color: #9999b0; }
-
+  .tool-desc    { padding: 0 1.6rem 1rem; font-size: 0.8rem; line-height: 1.7; color: #9999b0; }
   .tradeoff-row { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.6rem 1.6rem 0.8rem; background: rgba(255,107,107,0.04); border-top: 1px dashed rgba(255,107,107,0.18); border-bottom: 1px dashed rgba(255,107,107,0.18); margin: 0 0 0.2rem; }
   .tradeoff-icon { font-size: 0.75rem; color: #ff9999; margin-top: 2px; flex-shrink: 0; }
   .tradeoff-text { font-size: 0.75rem; line-height: 1.55; color: #bb9999; }
   .tradeoff-text strong { color: #ff9999; font-weight: 600; }
-
   .guide-section { border-top: 1px solid var(--border); padding: 1rem 1.6rem 1.4rem; }
   .guide-toggle { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em; color: var(--accent); background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; padding: 0; margin-bottom: 0.8rem; transition: color 0.2s; }
   .guide-toggle:hover       { color: #a78bfa; }
@@ -486,30 +156,27 @@ body.light-mode .score-ring .score-num { color: #007a62; }
   .guide-toggle.open .arrow { transform: rotate(90deg); }
   .guide-steps              { display: none; }
   .guide-steps.visible      { display: flex; flex-direction: column; gap: 0.7rem; }
-  .guide-step               { display: flex; gap: 0.8rem; align-items: flex-start; }
-  .step-num   { width: 20px; height: 20px; border-radius: 50%; background: rgba(124,92,252,0.15); border: 1px solid rgba(124,92,252,0.4); color: var(--accent); font-size: 0.6rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
-  .step-text  { font-size: 0.78rem; line-height: 1.6; color: var(--text); }
+  .guide-step  { display: flex; gap: 0.8rem; align-items: flex-start; }
+  .step-num    { width: 20px; height: 20px; border-radius: 50%; background: rgba(124,92,252,0.15); border: 1px solid rgba(124,92,252,0.4); color: var(--accent); font-size: 0.6rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step-text   { font-size: 0.78rem; line-height: 1.6; color: var(--text); }
   .step-text strong { color: var(--accent2); }
-  .tool-link  { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); text-decoration: none; margin-top: 0.8rem; padding: 0.4rem 0.8rem; border: 1px solid rgba(124,92,252,0.3); border-radius: 6px; transition: all 0.2s; }
+  .tool-link   { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); text-decoration: none; margin-top: 0.8rem; padding: 0.4rem 0.8rem; border: 1px solid rgba(124,92,252,0.3); border-radius: 6px; transition: all 0.2s; }
   .tool-link:hover { background: rgba(124,92,252,0.1); border-color: var(--accent); }
-
   .neutrality-banner { display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 1rem; background: rgba(0,212,170,0.05); border: 1px solid rgba(0,212,170,0.2); border-radius: 10px; margin-bottom: 1.4rem; font-size: 0.68rem; color: rgba(0,212,170,0.8); letter-spacing: 0.04em; line-height: 1.5; }
   .neutrality-banner .nb-icon { font-size: 0.9rem; flex-shrink: 0; }
 
-  /* ── PIPELINE STYLES ─────────────────────────────────────── */
   .pipeline-summary-banner { display: flex; align-items: flex-start; gap: 0.8rem; padding: 1rem 1.2rem; background: linear-gradient(135deg, rgba(124,92,252,0.08), rgba(0,212,170,0.05)); border: 1px solid rgba(124,92,252,0.25); border-radius: 12px; margin-bottom: 1rem; }
   .psb-icon  { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; opacity: 0.7; }
   .psb-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.3rem; }
   .psb-text  { font-size: 0.78rem; color: var(--text); line-height: 1.5; }
-
   .pipeline-container { display: flex; flex-direction: column; gap: 0; margin-bottom: 1rem; }
   .pipeline-node { animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(12px); }
   .pn-step-badge { font-size: 0.58rem; letter-spacing: 0.2em; font-weight: 700; color: var(--muted); text-transform: uppercase; padding: 0 0.2rem; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; }
   .pn-step-badge::after { content: ''; flex: 1; height: 1px; background: var(--border); }
   .pn-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; transition: border-color 0.3s; }
   .pn-card:hover { border-color: rgba(124,92,252,0.3); }
-  .pn-card-top { display: flex; align-items: center; gap: 0.9rem; padding: 1rem 1.2rem 0.7rem; }
-  .pn-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+  .pn-card-top  { display: flex; align-items: center; gap: 0.9rem; padding: 1rem 1.2rem 0.7rem; }
+  .pn-icon      { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
   .pn-meta      { flex: 1; min-width: 0; }
   .pn-subtask   { font-family: 'Syne', sans-serif; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.15rem; }
   .pn-tool-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--highlight); }
@@ -522,8 +189,8 @@ body.light-mode .score-ring .score-num { color: #007a62; }
   .pn-tradeoff { display: flex; gap: 0.5rem; align-items: flex-start; padding: 0.5rem 1.2rem; background: rgba(255,107,107,0.04); border-top: 1px dashed rgba(255,107,107,0.15); font-size: 0.72rem; color: #bb9999; line-height: 1.5; }
   .pn-tradeoff span { color: #ff9999; flex-shrink: 0; }
   .pn-guide-toggle { padding: 0.6rem 1.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; letter-spacing: 0.08em; color: var(--accent); cursor: pointer; display: flex; align-items: center; gap: 0.4rem; border-top: 1px solid var(--border); transition: color 0.2s; user-select: none; }
-  .pn-guide-toggle:hover       { color: #a78bfa; }
-  .pn-guide-toggle .arrow      { transition: transform 0.3s; }
+  .pn-guide-toggle:hover { color: #a78bfa; }
+  .pn-guide-toggle .arrow { transition: transform 0.3s; }
   .pn-guide-toggle.open .arrow { transform: rotate(90deg); }
   .pn-guide-steps { display: none; padding: 0.6rem 1.2rem 1rem; flex-direction: column; gap: 0.5rem; border-top: 1px solid var(--border); background: rgba(0,0,0,0.15); }
   .pn-guide-steps.visible { display: flex; }
@@ -535,13 +202,12 @@ body.light-mode .score-ring .score-num { color: #007a62; }
   .orch-icon { font-size: 1rem; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
   .orchestration-note strong { color: var(--accent); }
 
-  /* ── PROMPT SECTION ──────────────────────────────────────── */
   .prompt-section { border-top: 1px solid var(--border); }
   .prompt-section-toggle { display: flex; align-items: center; gap: 0.5rem; padding: 0.7rem 1.2rem; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; color: #f59e0b; cursor: pointer; user-select: none; transition: color 0.2s; background: rgba(245,158,11,0.03); }
   .prompt-section-toggle:hover { color: #fbbf24; background: rgba(245,158,11,0.06); }
-  .prompt-section-toggle .arrow      { transition: transform 0.3s; }
+  .prompt-section-toggle .arrow { transition: transform 0.3s; }
   .prompt-section-toggle.open .arrow { transform: rotate(90deg); }
-  .prompt-section-toggle .ps-icon    { font-size: 0.8rem; }
+  .prompt-section-toggle .ps-icon { font-size: 0.8rem; }
   .prompt-cards-container { display: none; padding: 0.5rem 1.2rem 1rem; gap: 0.7rem; flex-direction: column; }
   .prompt-cards-container.visible { display: flex; }
   .prompt-card { background: rgba(245,158,11,0.04); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; overflow: hidden; }
@@ -556,7 +222,6 @@ body.light-mode .score-ring .score-num { color: #007a62; }
   .puh-icon { color: var(--accent); font-size: 0.8rem; flex-shrink: 0; }
   .prompt-usage-hint strong { color: var(--accent); }
 
-  /* ── INLINE PROMPT BLOCKS ────────────────────────────────── */
   .inline-prompt-block { margin: 0.55rem 0 0.35rem; border: 1px solid rgba(245,158,11,0.3); border-radius: 9px; overflow: hidden; background: rgba(245,158,11,0.03); }
   .ipb-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.75rem; background: rgba(245,158,11,0.07); border-bottom: 1px solid rgba(245,158,11,0.18); flex-wrap: wrap; }
   .ipb-label   { font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #f59e0b; flex-shrink: 0; }
@@ -568,204 +233,59 @@ body.light-mode .score-ring .score-num { color: #007a62; }
   .ipb-instruction { padding: 0.35rem 0.75rem; font-size: 0.65rem; color: var(--accent); background: rgba(124,92,252,0.05); border-top: 1px solid rgba(124,92,252,0.12); }
   .ipb-instruction strong { color: var(--accent2); }
 
-  /* ── ACTION STEPS ────────────────────────────────────────── */
   .action-steps-section { margin-top: 1.5rem; border: 1px solid rgba(0,212,170,0.2); border-radius: 14px; overflow: hidden; background: rgba(0,212,170,0.02); }
-  .action-steps-header { display: flex; align-items: center; gap: 0.7rem; padding: 1rem 1.4rem; background: rgba(0,212,170,0.06); border-bottom: 1px solid rgba(0,212,170,0.15); }
+  .action-steps-header   { display: flex; align-items: center; gap: 0.7rem; padding: 1rem 1.4rem; background: rgba(0,212,170,0.06); border-bottom: 1px solid rgba(0,212,170,0.15); }
   .action-steps-title    { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent2); }
   .action-steps-subtitle { font-size: 0.68rem; color: var(--muted); margin-left: auto; }
   .action-steps-list     { padding: 0.8rem 1.4rem 1.2rem; display: flex; flex-direction: column; gap: 0; }
   .action-step-row { display: flex; align-items: flex-start; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px dashed rgba(0,212,170,0.1); }
   .action-step-row:last-child { border-bottom: none; }
-  .action-step-num { width: 26px; height: 26px; border-radius: 50%; background: rgba(0,212,170,0.12); border: 1px solid rgba(0,212,170,0.35); color: var(--accent2); font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .action-step-num  { width: 26px; height: 26px; border-radius: 50%; background: rgba(0,212,170,0.12); border: 1px solid rgba(0,212,170,0.35); color: var(--accent2); font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
   .action-step-body   { flex: 1; }
   .action-step-action { font-size: 0.8rem; color: var(--text); line-height: 1.5; margin-bottom: 0.25rem; }
   .action-step-meta   { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.3rem; }
-  .action-step-tool   { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); background: rgba(124,92,252,0.1); border: 1px solid rgba(124,92,252,0.25); padding: 0.15rem 0.45rem; border-radius: 4px; }
+  .action-step-tool     { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); background: rgba(124,92,252,0.1); border: 1px solid rgba(124,92,252,0.25); padding: 0.15rem 0.45rem; border-radius: 4px; }
   .action-step-duration { font-size: 0.62rem; color: var(--muted); font-style: italic; }
 
-  /* ── AUTH MODAL ──────────────────────────────────────────── */
-  .auth-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.75);
-    backdrop-filter: blur(8px);
-    z-index: 500;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.2s ease;
-  }
+  /* ── AUTH MODAL ── */
+  .auth-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 500; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-  .auth-modal-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 2.5rem;
-    width: 100%;
-    max-width: 420px;
-    margin: 1rem;
-    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    position: relative;
-  }
+  .auth-modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem; width: 100%; max-width: 420px; margin: 1rem; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); position: relative; }
   @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-
-  .auth-modal-close {
-    position: absolute;
-    top: 1rem; right: 1rem;
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    font-size: 1.1rem;
-    cursor: pointer;
-    width: 28px; height: 28px;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 50%;
-    transition: all 0.2s;
-  }
+  .auth-modal-close { position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; }
   .auth-modal-close:hover { background: var(--surface2); color: var(--text); }
-
-  .auth-modal-logo {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.3rem;
-    letter-spacing: 0.15em;
-    color: var(--highlight);
-    text-align: center;
-    margin-bottom: 0.3rem;
-  }
-
-  .auth-modal-subtitle {
-    font-size: 0.72rem;
-    color: var(--muted);
-    text-align: center;
-    margin-bottom: 1.8rem;
-    line-height: 1.6;
-  }
-
-  .auth-tabs {
-    display: flex;
-    background: var(--surface2);
-    border-radius: 8px;
-    padding: 3px;
-    margin-bottom: 1.4rem;
-    gap: 3px;
-  }
-
-  .auth-tab {
-    flex: 1;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 0.45rem;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
+  .auth-modal-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.3rem; letter-spacing: 0.15em; color: var(--highlight); text-align: center; margin-bottom: 0.3rem; }
+  .auth-modal-subtitle { font-size: 0.72rem; color: var(--muted); text-align: center; margin-bottom: 1.8rem; line-height: 1.6; }
+  .auth-tabs { display: flex; background: var(--surface2); border-radius: 8px; padding: 3px; margin-bottom: 1.4rem; gap: 3px; }
+  .auth-tab { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.45rem; border: none; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; transition: all 0.2s; }
   .auth-tab.active { background: var(--accent); color: white; }
-
-  .google-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    padding: 0.8rem;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 1.2rem;
-  }
+  .google-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 0.8rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; letter-spacing: 0.04em; cursor: pointer; transition: all 0.2s; margin-bottom: 1.2rem; }
   .google-btn:hover { border-color: var(--accent); background: rgba(124,92,252,0.08); }
-  .google-btn svg   { width: 18px; height: 18px; flex-shrink: 0; }
-
-  .auth-divider {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    margin-bottom: 1.2rem;
-    font-size: 0.62rem;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  .auth-divider::before,
-  .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
+  .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .auth-divider { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.2rem; font-size: 0.62rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
   .auth-field { margin-bottom: 1rem; }
   .auth-field label { display: block; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
-  .auth-field input {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.82rem;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .auth-field input:focus       { border-color: var(--accent); }
+  .auth-field input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; outline: none; transition: border-color 0.2s; }
+  .auth-field input:focus        { border-color: var(--accent); }
   .auth-field input::placeholder { color: var(--muted); }
-
-  .auth-submit-btn {
-    width: 100%;
-    padding: 0.85rem;
-    background: var(--accent);
-    border: none;
-    border-radius: 10px;
-    color: white;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-top: 0.4rem;
-  }
+  .auth-submit-btn { width: 100%; padding: 0.85rem; background: var(--accent); border: none; border-radius: 10px; color: white; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; margin-top: 0.4rem; }
   .auth-submit-btn:hover    { background: #9b7afe; }
   .auth-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
   .auth-error   { font-size: 0.7rem; color: var(--accent3); text-align: center; margin-top: 0.8rem; min-height: 1rem; }
   .auth-success { font-size: 0.7rem; color: var(--accent2); text-align: center; margin-top: 0.8rem; }
 
-  /* ── LOGIN BANNER (deferred, after recommendations) ──────── */
-  .login-banner {
-    margin-top: 1.5rem;
-    padding: 1.2rem 1.4rem;
-    background: linear-gradient(135deg, rgba(124,92,252,0.08), rgba(0,212,170,0.05));
-    border: 1px solid rgba(124,92,252,0.3);
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    opacity: 0;
-    transform: translateY(10px);
-  }
+  .login-banner { margin-top: 1.5rem; padding: 1.2rem 1.4rem; background: linear-gradient(135deg, rgba(124,92,252,0.08), rgba(0,212,170,0.05)); border: 1px solid rgba(124,92,252,0.3); border-radius: 14px; display: flex; align-items: center; gap: 1rem; animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(10px); }
   .login-banner-text  { flex: 1; }
   .login-banner-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; color: var(--highlight); margin-bottom: 0.25rem; }
   .login-banner-sub   { font-size: 0.7rem; color: var(--muted); line-height: 1.5; }
   .login-banner-btn   { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.5rem 1rem; background: var(--accent); border: none; border-radius: 8px; color: white; cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
   .login-banner-btn:hover { background: #9b7afe; }
 
-  /* ── SCROLLBAR ───────────────────────────────────────────── */
   ::-webkit-scrollbar       { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-  /* ── RESPONSIVE ──────────────────────────────────────────── */
   @media (max-width: 900px) {
     .app-container { grid-template-columns: 1fr; }
     .chat-panel    { height: 60vh; position: relative; top: 0; border-right: none; border-bottom: 1px solid var(--border); }
@@ -776,18 +296,15 @@ body.light-mode .score-ring .score-num { color: #007a62; }
 </head>
 <body>
 
-<!-- ── AUTH MODAL ────────────────────────────────────────────── -->
 <div class="auth-modal-overlay" id="authModal" style="display:none;">
   <div class="auth-modal-box">
     <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
     <div class="auth-modal-logo">◈ NEXUS</div>
     <div class="auth-modal-subtitle">Sign in to save your recommendations<br>and access your history anywhere.</div>
-
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabSignIn" onclick="switchTab('signin')">Sign In</button>
       <button class="auth-tab"        id="tabSignUp" onclick="switchTab('signup')">Sign Up</button>
     </div>
-
     <button class="google-btn" onclick="signInWithGoogle()">
       <svg viewBox="0 0 24 24" fill="none">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -797,9 +314,7 @@ body.light-mode .score-ring .score-num { color: #007a62; }
       </svg>
       Continue with Google
     </button>
-
     <div class="auth-divider">or</div>
-
     <div class="auth-field">
       <label>Email</label>
       <input type="email" id="authEmail" placeholder="you@example.com" />
@@ -809,18 +324,13 @@ body.light-mode .score-ring .score-num { color: #007a62; }
       <input type="password" id="authPassword" placeholder="••••••••" />
     </div>
     <button class="auth-submit-btn" id="authSubmitBtn" onclick="submitAuth()">Sign In</button>
-
     <div class="auth-error"   id="authError"></div>
     <div class="auth-success" id="authSuccess" style="display:none;"></div>
   </div>
 </div>
 
-<!-- ── HEADER ────────────────────────────────────────────────── -->
 <header>
-  <div class="logo">
-    <div class="logo-dot"></div>
-    NEXUS
-  </div>
+  <div class="logo"><div class="logo-dot"></div>NEXUS</div>
   <div class="header-tag">AI Tool Intelligence System</div>
   <div class="header-controls">
     <button class="theme-toggle-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
@@ -829,7 +339,6 @@ body.light-mode .score-ring .score-num { color: #007a62; }
   </div>
 </header>
 
-<!-- ── APP LAYOUT ────────────────────────────────────────────── -->
 <div class="app-container">
   <div class="chat-panel">
     <div class="chat-header">
@@ -839,14 +348,8 @@ body.light-mode .score-ring .score-num { color: #007a62; }
     <div class="messages" id="messages"></div>
     <div class="input-area">
       <div class="input-row">
-        <textarea
-          class="chat-input"
-          id="userInput"
-          placeholder="Describe your task..."
-          rows="1"
-          onkeydown="handleKey(event)"
-          oninput="autoResize(this)"
-        ></textarea>
+        <textarea class="chat-input" id="userInput" placeholder="Describe your task..." rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
         <button class="send-btn" onclick="sendMessage()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
@@ -855,7 +358,6 @@ body.light-mode .score-ring .score-num { color: #007a62; }
       </div>
     </div>
   </div>
-
   <div class="results-panel" id="resultsPanel">
     <div class="empty-state">
       <div class="empty-icon">◈</div>
@@ -866,77 +368,45 @@ body.light-mode .score-ring .score-num { color: #007a62; }
 </div>
 
 <script>
-// ============================================================
-// SUPABASE — keys fetched from /api/config (Vercel env vars)
-// Never hardcoded here — stays secure
-// ============================================================
+// ── SUPABASE AUTH ─────────────────────────────────────────────
 const { createClient } = supabase;
-let sb          = null;
-let currentUser = null;
-let authTab     = 'signin';
+let sb = null, currentUser = null, authTab = 'signin';
 
 async function initSupabase() {
   try {
     const res = await fetch('/api/config');
     const cfg = await res.json();
     sb = createClient(cfg.supabaseUrl, cfg.supabaseAnon);
-
     const { data } = await sb.auth.getSession();
     currentUser = data?.session?.user || null;
     updateAuthUI();
-
-    sb.auth.onAuthStateChange((event, session) => {
-      currentUser = session?.user || null;
-      updateAuthUI();
-    });
-
-    // Show login modal 2 seconds after page load if not signed in
+    sb.auth.onAuthStateChange((event, session) => { currentUser = session?.user || null; updateAuthUI(); });
     setTimeout(() => { if (!currentUser) openAuthModal(); }, 2000);
-
-  } catch(e) {
-    console.warn('Supabase init failed — auth disabled:', e.message);
-  }
+  } catch(e) { console.warn('Supabase init failed — auth disabled:', e.message); }
 }
 
-// ── Auth UI ───────────────────────────────────────────────────
 function updateAuthUI() {
   const btn = document.getElementById('authHeaderBtn');
   if (!btn) return;
-  if (currentUser) {
-    const short = (currentUser.email || '').split('@')[0].slice(0, 16);
-    btn.textContent = `● ${short}`;
-    btn.classList.add('signed-in');
-  } else {
-    btn.textContent = 'Sign In';
-    btn.classList.remove('signed-in');
-  }
+  if (currentUser) { btn.textContent = `● ${(currentUser.email||'').split('@')[0].slice(0,16)}`; btn.classList.add('signed-in'); }
+  else             { btn.textContent = 'Sign In'; btn.classList.remove('signed-in'); }
 }
 
 function handleAuthBtnClick() {
   if (!sb) return;
-  if (currentUser) {
-    if (confirm(`Sign out of ${currentUser.email}?`)) sb.auth.signOut();
-  } else {
-    openAuthModal();
-  }
+  if (currentUser) { if (confirm(`Sign out of ${currentUser.email}?`)) sb.auth.signOut(); }
+  else openAuthModal();
 }
 
 function openAuthModal() {
   document.getElementById('authModal').style.display = 'flex';
-  document.getElementById('authError').textContent    = '';
+  document.getElementById('authError').textContent = '';
   document.getElementById('authSuccess').style.display = 'none';
-  document.getElementById('authEmail').value    = '';
+  document.getElementById('authEmail').value = '';
   document.getElementById('authPassword').value = '';
 }
-
-function closeAuthModal() {
-  document.getElementById('authModal').style.display = 'none';
-}
-
-// Close on overlay click
-document.getElementById('authModal').addEventListener('click', function(e) {
-  if (e.target === this) closeAuthModal();
-});
+function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
+document.getElementById('authModal').addEventListener('click', function(e) { if (e.target === this) closeAuthModal(); });
 
 function switchTab(tab) {
   authTab = tab;
@@ -949,65 +419,38 @@ function switchTab(tab) {
 
 async function signInWithGoogle() {
   if (!sb) return;
-  const { error } = await sb.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.origin }
-  });
+  const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
   if (error) document.getElementById('authError').textContent = error.message;
 }
 
 async function submitAuth() {
   if (!sb) return;
-  const email    = document.getElementById('authEmail').value.trim();
+  const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
-  const btn      = document.getElementById('authSubmitBtn');
-  const errEl    = document.getElementById('authError');
-  const sucEl    = document.getElementById('authSuccess');
-
+  const btn = document.getElementById('authSubmitBtn');
+  const errEl = document.getElementById('authError');
+  const sucEl = document.getElementById('authSuccess');
   if (!email || !password) { errEl.textContent = 'Please enter email and password.'; return; }
-
-  btn.disabled = true;
-  btn.textContent = 'Please wait...';
-  errEl.textContent = '';
-  sucEl.style.display = 'none';
-
+  btn.disabled = true; btn.textContent = 'Please wait...'; errEl.textContent = ''; sucEl.style.display = 'none';
   const { data, error } = authTab === 'signin'
     ? await sb.auth.signInWithPassword({ email, password })
     : await sb.auth.signUp({ email, password });
-
-  btn.disabled = false;
-  btn.textContent = authTab === 'signin' ? 'Sign In' : 'Create Account';
-
+  btn.disabled = false; btn.textContent = authTab === 'signin' ? 'Sign In' : 'Create Account';
   if (error) { errEl.textContent = error.message; return; }
-
-  if (authTab === 'signup' && !data?.session) {
-    sucEl.textContent   = '✓ Check your email to confirm your account.';
-    sucEl.style.display = 'block';
-    return;
-  }
-
+  if (authTab === 'signup' && !data?.session) { sucEl.textContent = '✓ Check your email to confirm your account.'; sucEl.style.display = 'block'; return; }
   closeAuthModal();
 }
 
-// ── Login banner after recommendations ───────────────────────
 function appendLoginBanner() {
   const panel = document.getElementById('resultsPanel');
   if (!panel || document.getElementById('loginBanner') || currentUser) return;
   const b = document.createElement('div');
-  b.className = 'login-banner';
-  b.id = 'loginBanner';
-  b.innerHTML = `
-    <div class="login-banner-text">
-      <div class="login-banner-title">💾 Save these recommendations</div>
-      <div class="login-banner-sub">Sign in to access your history on any device.</div>
-    </div>
-    <button class="login-banner-btn" onclick="openAuthModal()">Sign In →</button>`;
+  b.className = 'login-banner'; b.id = 'loginBanner';
+  b.innerHTML = `<div class="login-banner-text"><div class="login-banner-title">💾 Save these recommendations</div><div class="login-banner-sub">Sign in to access your history on any device.</div></div><button class="login-banner-btn" onclick="openAuthModal()">Sign In →</button>`;
   panel.appendChild(b);
 }
 
-// ============================================================
-// AI TOOL DATABASE
-// ============================================================
+// ── AI TOOL DATABASE ──────────────────────────────────────────
 const AI_TOOLS_DB = {
   writing: [
     { name:"Claude (Anthropic)", icon:"🤖", color:"#7c5cfc", tagline:"Advanced reasoning, long-form writing, and nuanced analysis", pricing:"Free / $20/mo Pro", type:"LLM", url:"https://claude.ai", description:"Best for complex writing tasks, document analysis, creative projects, and tasks requiring deep reasoning. Excels at maintaining context over very long documents.", tradeoff:"Context window is generous but free tier has message limits; not ideal for high-volume automated writing.", guide:[{title:"Start a new chat",desc:"Go to <strong>claude.ai</strong> and click New Chat"},{title:"Describe your goal",desc:"Be specific about your task — tone, audience, format, length"},{title:"Iterate",desc:"Ask Claude to refine, expand, or change style as needed"},{title:"Use Projects",desc:"Organize related work using Claude's <strong>Projects</strong> feature for persistent context"}]},
@@ -1052,14 +495,7 @@ const AI_TOOLS_DB = {
   ]
 };
 
-// ============================================================
-// SYSTEM PROMPT
-// ============================================================
-// ============================================================
-// PASTE THIS AS YOUR SYSTEM_PROMPT IN index.html
-// Replaces the existing SYSTEM_PROMPT constant entirely
-// ============================================================
-
+// ── SYSTEM PROMPT ─────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are NEXUS, a strictly neutral AI Tool Intelligence System. You match users with best-fit AI tools and generate precise, optimised prompts for each tool based on the user's exact task and context.
 
 ════════════════════════════════════════
@@ -1101,8 +537,6 @@ TOOL RECOMMENDATION RULES
 PERSONALITY & FORMAT
 ════════════════════════════════════════
 Precise, analytical, neutral. Always respond in SHORT BULLET POINTS only during conversation.
-
-FORMAT RULES (STRICT during conversation):
 - Every conversational response MUST use bullet points starting with •
 - Max 1 short sentence per bullet, max 6 bullets per response
 - Never write paragraphs during conversation turns
@@ -1118,25 +552,25 @@ CRITICAL — Read the user's FIRST message carefully BEFORE asking any questions
 
 TURN 1 (user describes task):
 • Acknowledge the task in 1 bullet
-• If task spans MULTIPLE domains, state: "• This task requires a multi-tool pipeline across [N] subtasks."
+• If task spans MULTIPLE domains: "• This task requires a multi-tool pipeline across [N] subtasks."
 • State detected domain(s)
-• IF budget is already known from their message → skip budget question, go straight to skill level
-• IF budget is NOT mentioned → ask: "What is your budget?"
+• IF budget already known → skip budget question, go straight to skill level
+• IF budget NOT mentioned → ask: "What is your budget?"
 • Output OPTIONS block ONLY if asking a question
 
 TURN 2 (after budget is known):
 • Confirm budget briefly
-• IF skill level already known from their message → skip this question entirely, go to Turn 3
+• IF skill level already known → skip, go to Turn 3
 • IF skill level NOT mentioned → ask: "What is your technical skill level?"
 • Output OPTIONS block only if asking the question
 
 TURN 3 (after skill level is known):
 • Confirm skill level
-• Ask ONE domain-specific clarifying question that is NOT already answered in their original message
+• Ask ONE domain-specific clarifying question NOT already answered
 • Output OPTIONS block with 3-4 relevant choices
 
 TURN 4 (generate final recommendations):
-Analyse all requirements. Use the LIVE SEARCH DATA provided if available. Output ONE of these two JSON formats:
+Analyse all requirements. Use LIVE SEARCH DATA if provided. Output ONE of:
 
 ─── FORMAT A: SINGLE-TOOL TASK ───
 |||JSON_START
@@ -1194,16 +628,6 @@ Analyse all requirements. Use the LIVE SEARCH DATA provided if available. Output
 }
 |||JSON_END
 
-PROMPT QUALITY RULES:
-- Every prompt must be immediately copy-pasteable and usable without modification
-- Use all context gathered: task type, budget, skill level, domain specifics
-- For image tools: include style, lighting, composition, aspect ratio, negative prompts
-- For LLMs: include role, task, format, constraints, tone, output length
-- For code tools: include language, framework, style, what to avoid, expected structure
-- For voice tools: include tone, pace, emotion, audience
-- For video tools: include camera angle, motion, lighting, scene description, duration
-- For research tools: include scope, source preference, output format
-
 OPTIONS FORMAT:
 |||OPTIONS_START
 ["Option A", "Option B", "Option C"]
@@ -1216,74 +640,49 @@ SCORING (requirement-fit only, 0-100):
 - Tool costs more than stated budget → max score 40
 - Tool requires higher skill than stated → max score 55
 - Use case fit is the primary score driver
-- Tools from live search data should be scored based on their actual fit, not penalised for being unknown`;
+- Tools from live search data scored on actual fit, not penalised for being unknown`;
 
-// ============================================================
-// STATE
-// ============================================================
-let messages             = [];
-let isThinking           = false;
-const SESSION_ID         = crypto.randomUUID();
-let isFirstMessage       = true;
-let firstTaskDescription = '';
+// ── STATE ─────────────────────────────────────────────────────
+let messages = [], isThinking = false;
+const SESSION_ID = crypto.randomUUID();
+let isFirstMessage = true, firstTaskDescription = '';
 
-// ============================================================
-// GROQ API CALL
-// ============================================================
+// ── GROQ API CALL ─────────────────────────────────────────────
 async function callGroq(userMessage) {
   messages.push({ role: 'user', content: userMessage });
   if (isFirstMessage) firstTaskDescription = userMessage;
-
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model:       'llama-3.3-70b-versatile',
-      messages:    [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-      max_tokens:  8000,
-      temperature: 0.7,
-      top_p:       0.9,
-      sessionId:       SESSION_ID,
-      taskDescription: firstTaskDescription,
-      meta: {
-        isFirstMessage: isFirstMessage,
-        domain:     null,
-        budget:     null,
-        skillLevel: null,
-        // Tag with user identity if logged in
-        userId:    currentUser?.id    || null,
-        userEmail: currentUser?.email || null
-      }
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+      max_tokens: 8000, temperature: 0.7, top_p: 0.9,
+      sessionId: SESSION_ID, taskDescription: firstTaskDescription,
+      meta: { isFirstMessage, domain: null, budget: null, skillLevel: null,
+              userId: currentUser?.id || null, userEmail: currentUser?.email || null }
     })
   });
-
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(JSON.stringify(err));
-  }
-
+  if (!response.ok) { const err = await response.json(); throw new Error(JSON.stringify(err)); }
   isFirstMessage = false;
-  const data  = await response.json();
+  const data = await response.json();
   const reply = data.choices[0].message.content;
   messages.push({ role: 'assistant', content: reply });
   return reply;
 }
 
-// ============================================================
-// UI
-// ============================================================
+// ── UI HELPERS ────────────────────────────────────────────────
 function formatBullets(text) {
   return text.split('\n').map(line => {
     const t = line.trim();
-    if (t.startsWith('•') || t.startsWith('-')) {
+    if (t.startsWith('•') || t.startsWith('-'))
       return `<div class="bullet-item"><span class="bullet-dot">▸</span><span>${t.replace(/^[•\-]\s*/,'')}</span></div>`;
-    }
     return t.length ? `<div class="bullet-plain">${t}</div>` : '';
   }).join('') || text;
 }
 
 function addMessage(role, content, options = null) {
-  const el  = document.createElement('div');
+  const el = document.createElement('div');
   el.className = 'message';
   const uid = Date.now() + Math.random();
   const isAI = role === 'ai';
@@ -1300,15 +699,9 @@ function addMessage(role, content, options = null) {
 }
 
 function buildOptionsHTML(options, uid) {
-  const btns = options.map(o =>
-    `<button class="option-btn" onclick="selectOption(this,'${o.replace(/'/g,"\\'")}')">${o}</button>`
-  ).join('');
+  const btns = options.map(o => `<button class="option-btn" onclick="selectOption(this,'${o.replace(/'/g,"\\'")}')">${o}</button>`).join('');
   const oid = `other-${uid}`;
-  return `
-    <div class="options-grid">
-      ${btns}
-      <button class="option-btn other-btn" onclick="toggleOther(this,'${oid}')">✎ Other</button>
-    </div>
+  return `<div class="options-grid">${btns}<button class="option-btn other-btn" onclick="toggleOther(this,'${oid}')">✎ Other</button></div>
     <div class="other-input-row" id="${oid}" style="display:none;">
       <input class="other-text-input" type="text" placeholder="Type your answer..." onkeydown="otherKeydown(event,this)" />
       <button class="other-send-btn" onclick="sendOther(this)">→</button>
@@ -1321,18 +714,8 @@ function toggleOther(btn, id) {
   const row = document.getElementById(id);
   if (row) { row.style.display = 'flex'; row.querySelector('input').focus(); }
 }
-
-function otherKeydown(e, input) {
-  if (e.key === 'Enter') { e.preventDefault(); sendOther(input.nextElementSibling); }
-}
-
-function sendOther(btn) {
-  const val = btn.previousElementSibling.value.trim();
-  if (!val) return;
-  document.getElementById('userInput').value = val;
-  sendMessage();
-}
-
+function otherKeydown(e, input) { if (e.key === 'Enter') { e.preventDefault(); sendOther(input.nextElementSibling); } }
+function sendOther(btn) { const val = btn.previousElementSibling.value.trim(); if (!val) return; document.getElementById('userInput').value = val; sendMessage(); }
 function selectOption(btn, value) {
   btn.closest('.options-grid').querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
@@ -1343,76 +726,58 @@ function selectOption(btn, value) {
 
 function showTyping() {
   const el = document.createElement('div');
-  el.className = 'message';
-  el.id = 'typing-indicator';
+  el.className = 'message'; el.id = 'typing-indicator';
   el.innerHTML = `<div class="msg-avatar ai">NX</div><div class="msg-bubble"><div class="msg-sender">NEXUS</div><div class="typing"><span></span><span></span><span></span></div></div>`;
   const msgs = document.getElementById('messages');
-  msgs.appendChild(el);
-  msgs.scrollTop = msgs.scrollHeight;
+  msgs.appendChild(el); msgs.scrollTop = msgs.scrollHeight;
 }
+function hideTyping() { const el = document.getElementById('typing-indicator'); if (el) el.remove(); }
 
-function hideTyping() {
-  const el = document.getElementById('typing-indicator');
-  if (el) el.remove();
-}
-
-// ============================================================
-// PARSING
-// ============================================================
+// ── PARSING ───────────────────────────────────────────────────
 function parseOptions(reply) {
   const m = reply.match(/\|\|\|OPTIONS_START\s*([\s\S]*?)\s*\|\|\|OPTIONS_END/);
   if (!m) return null;
   try { return JSON.parse(m[1].trim()); } catch(e) { return null; }
 }
-
 function stripMarkers(reply) {
-  return reply
-    .replace(/\|\|\|OPTIONS_START[\s\S]*?\|\|\|OPTIONS_END/g, '')
-    .replace(/\|\|\|JSON_START[\s\S]*?\|\|\|JSON_END/g, '')
-    .trim();
+  return reply.replace(/\|\|\|OPTIONS_START[\s\S]*?\|\|\|OPTIONS_END/g, '').replace(/\|\|\|JSON_START[\s\S]*?\|\|\|JSON_END/g, '').trim();
 }
-
 function parseAndRenderTools(reply) {
   const m = reply.match(/\|\|\|JSON_START\s*([\s\S]*?)\s*\|\|\|JSON_END/);
   if (!m) return null;
   try {
     const data = JSON.parse(m[1]);
     data.mode === 'pipeline' ? renderPipeline(data) : renderSingle(data);
-    // Show deferred login banner after results if not signed in
     if (!currentUser) setTimeout(appendLoginBanner, 800);
     return stripMarkers(reply);
   } catch(e) { return null; }
 }
 
-// ============================================================
-// RENDER — Single Tool Mode
-// ============================================================
+// ── RENDER — Single ───────────────────────────────────────────
 function renderSingle(data) {
   const panel = document.getElementById('resultsPanel');
   panel.innerHTML = '';
   panel.appendChild(makeEl('div', 'results-header', `Recommendations — ${(data.domain || 'AI').toUpperCase()}`));
-
   const nb = makeEl('div', 'neutrality-banner');
   nb.innerHTML = `<span class="nb-icon">⚖</span><span>Recommendations based <strong>solely on your stated requirements</strong>. No tool is sponsored or preferred.</span>`;
   panel.appendChild(nb);
-
   const promptMap = {};
   (data.tool_prompts || []).forEach(tp => { promptMap[tp.tool] = tp.prompts || []; });
-
   const allTools = Object.values(AI_TOOLS_DB).flat();
   data.tools.forEach((name, i) => {
-    const tool = allTools.find(t => t.name === name);
-    if (!tool) return;
-    const card = createToolCard(tool, data.scores[i] || (90 - i * 8), i === 0, promptMap[name] || null);
+    const tool  = allTools.find(t => t.name === name);
+    const score = data.scores[i] || (90 - i * 8);
+    // ── KEY CHANGE: use fallback card for unknown tools ──────
+    const card  = tool
+      ? createToolCard(tool, score, i === 0, promptMap[name] || null)
+      : createFallbackCard(name, score, i === 0, promptMap[name] || null);
     card.style.animationDelay = `${i * 120}ms`;
     panel.appendChild(card);
   });
-
   const note = makeEl('div', '');
   note.style.cssText = 'padding:1rem;font-size:0.7rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);margin-top:0.5rem;';
   note.textContent = `✦ ${data.reasoning}`;
   panel.appendChild(note);
-
   if (data.action_steps?.length) {
     const pm = {};
     (data.tool_prompts || []).forEach(tp => { pm[tp.tool] = tp.prompts || []; });
@@ -1420,33 +785,25 @@ function renderSingle(data) {
   }
 }
 
-// ============================================================
-// RENDER — Pipeline Mode
-// ============================================================
+// ── RENDER — Pipeline ─────────────────────────────────────────
 function renderPipeline(data) {
-  const panel    = document.getElementById('resultsPanel');
+  const panel = document.getElementById('resultsPanel');
   panel.innerHTML = '';
   const allTools = Object.values(AI_TOOLS_DB).flat();
-
   panel.appendChild(makeEl('div', 'results-header', `AI PIPELINE — ${data.pipeline.length} SUBTASKS`));
-
   const sb2 = makeEl('div', 'pipeline-summary-banner');
   sb2.innerHTML = `<span class="psb-icon">◈</span><div><div class="psb-title">Multi-Tool Workflow Detected</div><div class="psb-text">${data.summary}</div></div>`;
   panel.appendChild(sb2);
-
   const nb = makeEl('div', 'neutrality-banner');
   nb.innerHTML = `<span class="nb-icon">⚖</span><span>Each subtask is assigned the <strong>best-fit tool</strong> based on requirements only — no brand bias.</span>`;
   panel.appendChild(nb);
-
   const container = makeEl('div', 'pipeline-container');
-
   data.pipeline.forEach((step, idx) => {
     const tool  = allTools.find(t => t.name === step.tool);
     const sc    = step.fit_score >= 80 ? '#00d4aa' : step.fit_score >= 60 ? '#f59e0b' : '#ff6b6b';
     const icon  = tool?.icon  || '🔧';
     const color = tool?.color || '#7c5cfc';
-
-    const node = makeEl('div', 'pipeline-node');
+    const node  = makeEl('div', 'pipeline-node');
     node.style.animationDelay = `${idx * 150}ms`;
     node.innerHTML = `
       <div class="pn-step-badge">STEP ${step.step}</div>
@@ -1466,122 +823,96 @@ function renderPipeline(data) {
         <div class="pn-guide-toggle" onclick="togglePnGuide(this)"><span class="arrow">▶</span> Quick Start Guide</div>
         <div class="pn-guide-steps">
           ${tool ? tool.guide.map((g,i) => `<div class="guide-step"><div class="step-num">${i+1}</div><div class="step-text"><strong>${g.title}</strong> — ${g.desc}</div></div>`).join('') : ''}
-          ${tool ? `<a href="${tool.url}" target="_blank" class="tool-link">Open ${step.tool} ↗</a>` : ''}
+          ${tool ? `<a href="${tool.url}" target="_blank" class="tool-link">Open ${step.tool} ↗</a>` : `<a href="https://theresanaiforthat.com/s/${encodeURIComponent(step.tool)}" target="_blank" class="tool-link">Find ${step.tool} ↗</a>`}
         </div>
         ${step.prompts?.length ? buildPromptSection(step.prompts, step.tool) : ''}
       </div>`;
     container.appendChild(node);
-
     if (step.connects_to !== null && idx < data.pipeline.length - 1) {
       const conn = makeEl('div', 'pipeline-connector');
       conn.innerHTML = `<div class="pc-line"></div><div class="pc-arrow-head">▼</div><div class="pc-label">${step.output}</div>`;
       container.appendChild(conn);
     }
   });
-
   panel.appendChild(container);
-
   const orch = makeEl('div', 'orchestration-note');
   orch.innerHTML = `<span class="orch-icon">⟳</span><div><strong>Orchestration:</strong> ${data.orchestration}</div>`;
   panel.appendChild(orch);
-
   const rn = makeEl('div', '');
   rn.style.cssText = 'padding:1rem;font-size:0.7rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);';
   rn.textContent = `✦ ${data.reasoning}`;
   panel.appendChild(rn);
-
   if (data.action_steps?.length) {
     const pm = {};
-    data.pipeline.forEach(s => {
-      if (s.prompts?.length) { pm[s.step] = s.prompts; pm[s.tool] = s.prompts; }
-    });
+    data.pipeline.forEach(s => { if (s.prompts?.length) { pm[s.step] = s.prompts; pm[s.tool] = s.prompts; } });
     panel.appendChild(buildActionSteps(data.action_steps, pm));
   }
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
+// ── HELPERS ───────────────────────────────────────────────────
 function makeEl(tag, cls, text = '') {
   const el = document.createElement(tag);
   if (cls)  el.className   = cls;
   if (text) el.textContent = text;
   return el;
 }
-
 function togglePnGuide(el)       { el.classList.toggle('open'); el.nextElementSibling.classList.toggle('visible'); }
 function toggleGuide(btn)        { btn.classList.toggle('open'); btn.nextElementSibling.classList.toggle('visible'); }
 function togglePromptSection(el) { el.classList.toggle('open'); el.nextElementSibling.classList.toggle('visible'); }
 
 function buildPromptSection(prompts, toolName) {
-  const uid   = 'ps_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const uid = 'ps_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
   const cards = prompts.map((p, i) => {
     const pid = `${uid}_${i}`;
-    return `
-      <div class="prompt-card">
-        <div class="prompt-card-header">
-          <span class="prompt-label">⚡ ${p.label || 'Prompt '+(i+1)}</span>
-          <span class="prompt-purpose">${p.purpose || ''}</span>
-          <button class="prompt-copy-btn" onclick="copyText(this,'pt_${pid}')">⎘ Copy</button>
-        </div>
-        <div class="prompt-text" id="pt_${pid}">${escHtml(p.prompt)}</div>
-        <div class="prompt-usage-hint">
-          <span class="puh-icon">↗</span>
-          <span>Open <strong>${toolName || 'the tool'}</strong> → paste this prompt directly into the input field</span>
-        </div>
-      </div>`;
-  }).join('');
-  return `
-    <div class="prompt-section">
-      <div class="prompt-section-toggle open" onclick="togglePromptSection(this)">
-        <span class="arrow" style="transform:rotate(90deg)">▶</span>
-        <span class="ps-icon">⚡</span>
-        Ready-to-Use Prompts (${prompts.length})
+    return `<div class="prompt-card">
+      <div class="prompt-card-header">
+        <span class="prompt-label">⚡ ${p.label || 'Prompt '+(i+1)}</span>
+        <span class="prompt-purpose">${p.purpose || ''}</span>
+        <button class="prompt-copy-btn" onclick="copyText(this,'pt_${pid}')">⎘ Copy</button>
       </div>
-      <div class="prompt-cards-container visible">${cards}</div>
+      <div class="prompt-text" id="pt_${pid}">${escHtml(p.prompt)}</div>
+      <div class="prompt-usage-hint"><span class="puh-icon">↗</span><span>Open <strong>${toolName || 'the tool'}</strong> → paste this prompt directly into the input field</span></div>
     </div>`;
+  }).join('');
+  return `<div class="prompt-section">
+    <div class="prompt-section-toggle open" onclick="togglePromptSection(this)">
+      <span class="arrow" style="transform:rotate(90deg)">▶</span><span class="ps-icon">⚡</span>
+      Ready-to-Use Prompts (${prompts.length})
+    </div>
+    <div class="prompt-cards-container visible">${cards}</div>
+  </div>`;
 }
 
 function buildActionSteps(steps, promptMap) {
   const el       = makeEl('div', 'action-steps-section');
   const totalMin = steps.reduce((a, s) => a + (parseInt((s.duration||'').replace(/\D/g,'')) || 5), 0);
-
   const html = steps.map(s => {
     const prompts = (promptMap && (promptMap[s.step] || promptMap[s.tool])) || [];
     const inline  = prompts.map((p, i) => {
       const id = `ip_${s.step}_${i}_${Date.now().toString(36)}`;
-      return `
-        <div class="inline-prompt-block">
-          <div class="ipb-header">
-            <span class="ipb-label">⚡ ${p.label || 'Prompt'}</span>
-            <span class="ipb-purpose">${p.purpose || ''}</span>
-            <button class="ipb-copy-btn" onclick="copyText(this,'${id}')">⎘ Copy Prompt</button>
-          </div>
-          <div class="ipb-text" id="${id}">${escHtml(p.prompt)}</div>
-          <div class="ipb-instruction">↗ Paste this into <strong>${s.tool}</strong></div>
-        </div>`;
-    }).join('');
-    return `
-      <div class="action-step-row">
-        <div class="action-step-num">${s.step}</div>
-        <div class="action-step-body">
-          <div class="action-step-action">${s.action}</div>
-          ${inline}
-          <div class="action-step-meta">
-            ${s.tool     ? `<span class="action-step-tool">${s.tool}</span>`         : ''}
-            ${s.duration ? `<span class="action-step-duration">${s.duration}</span>` : ''}
-          </div>
+      return `<div class="inline-prompt-block">
+        <div class="ipb-header">
+          <span class="ipb-label">⚡ ${p.label || 'Prompt'}</span>
+          <span class="ipb-purpose">${p.purpose || ''}</span>
+          <button class="ipb-copy-btn" onclick="copyText(this,'${id}')">⎘ Copy Prompt</button>
         </div>
+        <div class="ipb-text" id="${id}">${escHtml(p.prompt)}</div>
+        <div class="ipb-instruction">↗ Paste this into <strong>${s.tool}</strong></div>
       </div>`;
+    }).join('');
+    return `<div class="action-step-row">
+      <div class="action-step-num">${s.step}</div>
+      <div class="action-step-body">
+        <div class="action-step-action">${s.action}</div>
+        ${inline}
+        <div class="action-step-meta">
+          ${s.tool     ? `<span class="action-step-tool">${s.tool}</span>`         : ''}
+          ${s.duration ? `<span class="action-step-duration">${s.duration}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
   }).join('');
-
-  el.innerHTML = `
-    <div class="action-steps-header">
-      <span style="font-size:1rem">▶</span>
-      <div class="action-steps-title">Execution Roadmap</div>
-      <div class="action-steps-subtitle">~${totalMin} min total · ${steps.length} steps</div>
-    </div>
-    <div class="action-steps-list">${html}</div>`;
+  el.innerHTML = `<div class="action-steps-header"><span style="font-size:1rem">▶</span><div class="action-steps-title">Execution Roadmap</div><div class="action-steps-subtitle">~${totalMin} min total · ${steps.length} steps</div></div><div class="action-steps-list">${html}</div>`;
   return el;
 }
 
@@ -1590,7 +921,6 @@ function createToolCard(tool, score, isTop, prompts = null) {
   const circ   = 2 * Math.PI * 18;
   const offset = circ - (score / 100) * circ;
   const sc     = score >= 80 ? '#00d4aa' : score >= 60 ? '#f59e0b' : '#ff6b6b';
-
   card.innerHTML = `
     ${isTop ? '<div class="highlight-rank"></div>' : ''}
     <div class="tool-card-header">
@@ -1608,8 +938,7 @@ function createToolCard(tool, score, isTop, prompts = null) {
       <div class="score-ring">
         <svg width="52" height="52" viewBox="0 0 52 52">
           <circle cx="26" cy="26" r="18" fill="none" stroke="var(--border)" stroke-width="3"/>
-          <circle cx="26" cy="26" r="18" fill="none" stroke="${sc}" stroke-width="3"
-            stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
+          <circle cx="26" cy="26" r="18" fill="none" stroke="${sc}" stroke-width="3" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
         </svg>
         <div class="score-num" style="color:${sc}">${score}</div>
       </div>
@@ -1627,6 +956,42 @@ function createToolCard(tool, score, isTop, prompts = null) {
   return card;
 }
 
+// ── FALLBACK CARD — for tools discovered via live Tavily search
+function createFallbackCard(toolName, score, isTop, prompts = null) {
+  const card   = makeEl('div', `tool-card ${isTop ? 'top-pick' : ''}`);
+  const circ   = 2 * Math.PI * 18;
+  const offset = circ - (score / 100) * circ;
+  const sc     = score >= 80 ? '#00d4aa' : score >= 60 ? '#f59e0b' : '#ff6b6b';
+  const initial = (toolName || 'T').charAt(0).toUpperCase();
+  card.innerHTML = `
+    ${isTop ? '<div class="highlight-rank"></div>' : ''}
+    <div class="tool-card-header">
+      <div class="tool-icon" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.3);font-family:'Syne',sans-serif;font-weight:800;color:var(--accent);font-size:1.2rem;">${initial}</div>
+      <div class="tool-meta">
+        ${isTop ? '<div class="top-pick-label">★ Best Requirement Match</div>' : ''}
+        <div class="tool-name">${toolName}</div>
+        <div class="tool-tagline" style="font-family:'JetBrains Mono',monospace;font-style:normal;font-size:0.7rem;">Discovered via live search</div>
+        <div class="tool-badges">
+          <span class="badge badge-match" style="color:${sc};border-color:${sc}40;background:${sc}12">Fit ${score}%</span>
+          <span class="badge" style="background:rgba(124,92,252,0.1);border:1px solid rgba(124,92,252,0.25);color:#a78bfa;">Live Search</span>
+        </div>
+      </div>
+      <div class="score-ring">
+        <svg width="52" height="52" viewBox="0 0 52 52">
+          <circle cx="26" cy="26" r="18" fill="none" stroke="var(--border)" stroke-width="3"/>
+          <circle cx="26" cy="26" r="18" fill="none" stroke="${sc}" stroke-width="3" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
+        </svg>
+        <div class="score-num" style="color:${sc}">${score}</div>
+      </div>
+    </div>
+    <div class="tool-desc">This tool was recommended from live search data and may be newer or more specialised than tools in our core database.</div>
+    <div class="guide-section">
+      <a href="https://theresanaiforthat.com/s/${encodeURIComponent(toolName)}" target="_blank" class="tool-link">Find ${toolName} on There's An AI For That ↗</a>
+    </div>
+    ${prompts?.length ? buildPromptSection(prompts, toolName) : ''}`;
+  return card;
+}
+
 function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function copyText(btn, id) {
@@ -1634,91 +999,61 @@ function copyText(btn, id) {
   if (!el) return;
   const orig = btn.textContent;
   const done = () => { btn.textContent = '✓ Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000); };
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(el.textContent).then(done).catch(() => { fallbackCopy(el.textContent); done(); });
-  } else { fallbackCopy(el.textContent); done(); }
+  if (navigator.clipboard) navigator.clipboard.writeText(el.textContent).then(done).catch(() => { fallbackCopy(el.textContent); done(); });
+  else { fallbackCopy(el.textContent); done(); }
 }
-
 function fallbackCopy(text) {
   const ta = document.createElement('textarea');
   ta.value = text; document.body.appendChild(ta); ta.select();
   document.execCommand('copy'); document.body.removeChild(ta);
 }
 
-// ============================================================
-// SEND MESSAGE
-// ============================================================
+// ── SEND MESSAGE ──────────────────────────────────────────────
 async function sendMessage() {
   if (isThinking) return;
   const input = document.getElementById('userInput');
   const text  = input.value.trim();
   if (!text) return;
-
-  input.value = '';
-  input.style.height = 'auto';
+  input.value = ''; input.style.height = 'auto';
   document.querySelectorAll('.option-btn').forEach(b => { b.disabled = true; b.style.opacity = '0.4'; });
-
   addMessage('user', text);
   isThinking = true;
   showTyping();
-
   try {
     const reply = await callGroq(text);
     hideTyping();
     const toolResult = parseAndRenderTools(reply);
-    if (toolResult !== null) {
-      addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded →');
-    } else {
-      addMessage('ai', stripMarkers(reply), parseOptions(reply));
-    }
+    if (toolResult !== null) addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded →');
+    else addMessage('ai', stripMarkers(reply), parseOptions(reply));
   } catch(e) {
     hideTyping();
     addMessage('ai', '• Connection error. Please try again.');
     console.error('Groq error:', e);
   }
-
   isThinking = false;
 }
 
-function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-}
+function handleKey(e)   { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
 
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-}
-
-// ============================================================
-// RESET
-// ============================================================
+// ── RESET ─────────────────────────────────────────────────────
 function resetApp() {
-  messages             = [];
-  isFirstMessage       = true;
-  firstTaskDescription = '';
+  messages = []; isFirstMessage = true; firstTaskDescription = '';
   document.getElementById('messages').innerHTML = '';
-  document.getElementById('resultsPanel').innerHTML = `
-    <div class="empty-state">
-      <div class="empty-icon">◈</div>
-      <div class="empty-title">Awaiting Analysis</div>
-      <div class="empty-sub">Describe your task in the chat and NEXUS will identify the best AI tools for your specific needs.</div>
-    </div>`;
+  document.getElementById('resultsPanel').innerHTML = `<div class="empty-state"><div class="empty-icon">◈</div><div class="empty-title">Awaiting Analysis</div><div class="empty-sub">Describe your task in the chat and NEXUS will identify the best AI tools for your specific needs.</div></div>`;
   setTimeout(addWelcomeMessage, 100);
 }
 
 function addWelcomeMessage() {
-  addMessage('ai', `• Welcome — I'm <strong>NEXUS</strong>, your AI Tool Intelligence System. I know AI tools across writing, coding, images, research, voice, video, automation, and data.\n• Tell me what task you want to accomplish, and I'll find the perfect tool for you.`);
+  addMessage('ai', `• Welcome — I'm <strong>NEXUS</strong>, your AI Tool Intelligence System. Now powered by live search — I can recommend tools beyond my built-in database.\n• Tell me what task you want to accomplish, and I'll find the perfect tool for you.`);
 }
 
-// ============================================================
-// THEME TOGGLE
-// ============================================================
+// ── THEME ─────────────────────────────────────────────────────
 function toggleTheme() {
   const isLight = document.body.classList.toggle('light-mode');
   document.getElementById('themeBtn').textContent = isLight ? '☀️' : '🌙';
   localStorage.setItem('nexus-theme', isLight ? 'light' : 'dark');
 }
-
 (function() {
   if (localStorage.getItem('nexus-theme') === 'light') {
     document.body.classList.add('light-mode');
@@ -1729,10 +1064,8 @@ function toggleTheme() {
   }
 })();
 
-// ============================================================
-// INIT
-// ============================================================
-initSupabase();   // loads keys from /api/config then sets up auth
+// ── INIT ──────────────────────────────────────────────────────
+initSupabase();
 addWelcomeMessage();
 </script>
 </body>
