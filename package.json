@@ -1,6 +1,7 @@
 {
   "name": "nexus-app",
   "version": "1.0.0",
+  "description": "NEXUS — AI Tool Intelligence System",
   "scripts": {
     "dev": "npx vercel dev"
   }
