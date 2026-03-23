@@ -118,7 +118,7 @@
   .results-header::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
   /* ── RESULTS ACTION BAR (PDF + Share) ── */
-  .results-action-bar { display: flex; gap: 0.6rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+  .results-action-bar { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; flex-wrap: nowrap; align-items: center; }
   .action-bar-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.4rem 0.9rem; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
   .pdf-btn   { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3); color: #ff9999; }
   .pdf-btn:hover   { background: rgba(255,107,107,0.2); border-color: var(--accent3); color: var(--accent3); }
@@ -321,7 +321,10 @@
   .history-card-date  { font-size: 0.62rem; color: var(--muted); }
   .history-card-tools { display: flex; gap: 0.3rem; flex-wrap: wrap; }
   .history-tool-chip  { font-size: 0.58rem; letter-spacing: 0.08em; padding: 0.15rem 0.45rem; background: rgba(124,92,252,0.12); border: 1px solid rgba(124,92,252,0.25); border-radius: 4px; color: #a78bfa; text-transform: uppercase; }
-  .history-loading { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.78rem; }
+  .history-search { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 64px; z-index: 1; }
+  .history-search input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; outline: none; transition: border-color 0.2s; }
+  .history-search input:focus { border-color: var(--accent); }
+  .history-search input::placeholder { color: var(--muted); }
 
   /* ── SHARE TOAST ── */
   .share-toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent2); border-radius: 10px; padding: 0.8rem 1.2rem; font-size: 0.78rem; color: var(--accent2); display: flex; align-items: center; gap: 0.6rem; z-index: 600; animation: toastIn 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
@@ -373,6 +376,9 @@
     <div class="history-header">
       <div class="history-title">◈ Session History</div>
       <button class="history-close" onclick="closeHistory()">✕</button>
+    </div>
+    <div class="history-search">
+      <input type="text" id="historySearch" placeholder="Search sessions..." oninput="filterHistory(this.value)" />
     </div>
     <div class="history-list" id="historyList">
       <div class="history-loading">Loading your sessions...</div>
@@ -543,43 +549,87 @@ function openHistory() {
 function closeHistory() { document.getElementById('historyOverlay').style.display = 'none'; }
 function handleHistoryOverlayClick(e) { if (e.target === e.currentTarget) closeHistory(); }
 
+// Generates a human-readable title for a session card
+function generateSessionTitle(session) {
+  // Priority 1: use task description (raw first message — most descriptive)
+  if (session.task_description && session.task_description.trim().length > 3) {
+    const t = session.task_description.trim();
+    return t.length > 80 ? t.slice(0, 80) + '…' : t;
+  }
+  // Priority 2: build title from recommended tools + domain
+  const tools  = (session.recommended_tools || []).slice(0, 2);
+  const domain = session.domain ? session.domain.charAt(0).toUpperCase() + session.domain.slice(1) : '';
+  if (tools.length && domain) return `${domain} — ${tools.join(', ')}`;
+  if (tools.length)            return tools.join(' · ');
+  if (domain)                  return `${domain} task`;
+  // Fallback
+  const date = new Date(session.created_at);
+  return `Session — ${date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
+}
+
+let cachedSessions = []; // cached for instant search filtering
+
 async function loadHistory() {
   const list = document.getElementById('historyList');
   list.innerHTML = '<div class="history-loading">Loading your sessions...</div>';
+  // Clear search box
+  const searchEl = document.getElementById('historySearch');
+  if (searchEl) searchEl.value = '';
+
   try {
     const { data: sessions, error } = await sb
       .from('sessions')
       .select('*')
       .eq('user_id', currentUser.id)
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(100);
     if (error) throw error;
-    if (!sessions?.length) {
-      list.innerHTML = '<div class="history-empty">No sessions yet.<br>Start a conversation and your recommendations will appear here.</div>';
-      return;
-    }
-    list.innerHTML = '';
-    sessions.forEach(session => {
-      const card = document.createElement('div');
-      card.className = 'history-card';
-      const date   = new Date(session.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-      const tools  = (session.recommended_tools || []).slice(0, 3);
-      const task   = session.task_description || session.domain || 'Untitled session';
-      card.innerHTML = `
-        <div class="history-card-task">${escHtml(task.slice(0, 100))}${task.length > 100 ? '...' : ''}</div>
-        <div class="history-card-meta">
-          <span class="history-card-date">${date}</span>
-          <div class="history-card-tools">
-            ${tools.map(t => `<span class="history-tool-chip">${escHtml(t.split(' ')[0])}</span>`).join('')}
-            ${session.pipeline_mode ? '<span class="history-tool-chip" style="color:var(--accent2);border-color:rgba(0,212,170,0.3);">Pipeline</span>' : ''}
-          </div>
-        </div>`;
-      card.onclick = () => reopenSession(session);
-      list.appendChild(card);
-    });
+    cachedSessions = sessions || [];
+    renderHistoryList(cachedSessions);
   } catch(e) {
     list.innerHTML = `<div class="history-empty">Could not load history.<br>${e.message}</div>`;
   }
+}
+
+function filterHistory(query) {
+  if (!query.trim()) { renderHistoryList(cachedSessions); return; }
+  const q = query.toLowerCase();
+  const filtered = cachedSessions.filter(s => {
+    const title = generateSessionTitle(s).toLowerCase();
+    const tools = (s.recommended_tools || []).join(' ').toLowerCase();
+    const domain = (s.domain || '').toLowerCase();
+    return title.includes(q) || tools.includes(q) || domain.includes(q);
+  });
+  renderHistoryList(filtered, query);
+}
+
+function renderHistoryList(sessions, query = '') {
+  const list = document.getElementById('historyList');
+  if (!sessions?.length) {
+    list.innerHTML = query
+      ? `<div class="history-empty">No sessions match "<strong>${escHtml(query)}</strong>"</div>`
+      : '<div class="history-empty">No sessions yet.<br>Start a conversation and your recommendations will appear here.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  sessions.forEach(session => {
+    const card  = document.createElement('div');
+    card.className = 'history-card';
+    const date  = new Date(session.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const title = generateSessionTitle(session);
+    const tools = (session.recommended_tools || []).slice(0, 3);
+    card.innerHTML = `
+      <div class="history-card-task">${escHtml(title)}</div>
+      <div class="history-card-meta">
+        <span class="history-card-date">${date}</span>
+        <div class="history-card-tools">
+          ${tools.map(t => `<span class="history-tool-chip">${escHtml(t.split(' ')[0])}</span>`).join('')}
+          ${session.pipeline_mode ? '<span class="history-tool-chip" style="color:var(--accent2);border-color:rgba(0,212,170,0.3);">Pipeline</span>' : ''}
+        </div>
+      </div>`;
+    card.onclick = () => reopenSession(session);
+    list.appendChild(card);
+  });
 }
 
 async function reopenSession(session) {
@@ -874,7 +924,9 @@ TURN 2 (after budget is known):
 
 TURN 3 (after skill level is known):
 • Confirm skill level
-• Ask ONE domain-specific clarifying question NOT already answered
+• Ask ONE specific clarifying question about the USE CASE — NOT about tool preference
+• Good examples: "What is your primary output format?", "Do you need it to work offline?", "What is the approximate size of your dataset?", "Is this for a one-time task or ongoing use?"
+• BAD examples — NEVER ask: "Which tool do you prefer?", "Do you have a tool in mind?", "What tools have you tried?" — NEXUS decides the tool, the user does not
 • Output OPTIONS block with 3-4 relevant choices
 
 TURN 4 (generate final recommendations):
