@@ -1098,9 +1098,11 @@ function renderSingle(data) {
   panel.appendChild(note);
 
   if (data.action_steps?.length) {
-    const pm = {};
-    (data.tool_prompts||[]).forEach(tp => { pm[tp.tool] = tp.prompts||[]; });
-    panel.appendChild(buildActionSteps(data.action_steps, pm));
+    // In single mode, prompts already appear inside each tool card above.
+    // Passing them to buildActionSteps caused every action step to repeat
+    // the same tool's prompts. Pass an empty map — action steps show
+    // the action text, tool badge, and duration only.
+    panel.appendChild(buildActionSteps(data.action_steps, {}));
   }
 }
 
@@ -1170,8 +1172,11 @@ function renderPipeline(data) {
   rn.textContent = `✦ ${data.reasoning}`;
   panel.appendChild(rn);
   if (data.action_steps?.length) {
+    // Key by step number ONLY — never by tool name.
+    // Keying by tool name caused every step using the same tool
+    // to show identical prompts, creating the redundancy bug.
     const pm = {};
-    data.pipeline.forEach(s => { if (s.prompts?.length) { pm[s.step]=s.prompts; pm[s.tool]=s.prompts; } });
+    data.pipeline.forEach(s => { if (s.prompts?.length) pm[s.step] = s.prompts; });
     panel.appendChild(buildActionSteps(data.action_steps, pm));
   }
 }
