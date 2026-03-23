@@ -3,11 +3,13 @@
   "builds": [
     { "src": "api/chat.js",   "use": "@vercel/node" },
     { "src": "api/config.js", "use": "@vercel/node" },
+    { "src": "api/share.js",  "use": "@vercel/node" },
     { "src": "index.html",    "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/chat",   "dest": "/api/chat.js"   },
     { "src": "/api/config", "dest": "/api/config.js" },
+    { "src": "/api/share",  "dest": "/api/share.js"  },
     { "src": "/(.*)",       "dest": "/index.html"    }
   ]
 }
