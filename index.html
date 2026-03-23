@@ -119,12 +119,12 @@
 
   /* ── RESULTS ACTION BAR (PDF + Share) ── */
   .results-action-bar { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; flex-wrap: nowrap; align-items: center; }
-  .action-bar-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.4rem 0.9rem; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
-  .pdf-btn   { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3); color: #ff9999; }
-  .pdf-btn:hover   { background: rgba(255,107,107,0.2); border-color: var(--accent3); color: var(--accent3); }
-  .share-btn { background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.3); color: var(--accent2); }
-  .share-btn:hover { background: rgba(0,212,170,0.2); }
-  .share-copied { background: rgba(0,212,170,0.2) !important; }
+  .action-bar-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.45rem 1rem; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; flex-shrink: 0; }
+  .pdf-btn         { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.35); color: #ff9999; }
+  .pdf-btn:hover   { background: rgba(255,107,107,0.22); border-color: var(--accent3); color: var(--accent3); }
+  .share-btn       { background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.35); color: var(--accent2); }
+  .share-btn:hover { background: rgba(0,212,170,0.22); }
+  .share-copied    { background: rgba(0,212,170,0.25) !important; }
 
   /* ── EMPTY STATE ── */
   .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; gap: 1rem; padding: 3rem; }
@@ -659,7 +659,7 @@ async function reopenSession(session) {
 let currentShareId = null;
 
 async function shareRecommendation() {
-  const btn = document.querySelector('.share-btn');
+  const btn = document.getElementById('shareBtnMain') || document.querySelector('#resultsPanel .share-btn');
   if (!btn) return;
   btn.textContent = '⏳ Creating link...';
   try {
@@ -1124,10 +1124,8 @@ function renderSingle(data) {
   const bar = makeEl('div', 'results-action-bar');
   bar.innerHTML = `
     <button class="action-bar-btn pdf-btn" onclick="exportToPDF()">⬇ Download PDF</button>
-    <button class="action-bar-btn share-btn" onclick="shareRecommendation()">🔗 Share</button>`;
+    <button class="action-bar-btn share-btn" id="shareBtnMain" onclick="shareRecommendation()">🔗 Share</button>`;
   panel.appendChild(bar);
-
-  const nb = makeEl('div', 'neutrality-banner');
   nb.innerHTML = `<span class="nb-icon">⚖</span><span>Recommendations based <strong>solely on your stated requirements</strong>. No tool is sponsored or preferred.</span>`;
   panel.appendChild(nb);
 
@@ -1169,7 +1167,7 @@ function renderPipeline(data) {
   const bar = makeEl('div', 'results-action-bar');
   bar.innerHTML = `
     <button class="action-bar-btn pdf-btn" onclick="exportToPDF()">⬇ Download PDF</button>
-    <button class="action-bar-btn share-btn" onclick="shareRecommendation()">🔗 Share</button>`;
+    <button class="action-bar-btn share-btn" id="shareBtnMain" onclick="shareRecommendation()">🔗 Share</button>`;
   panel.appendChild(bar);
 
   const sb2 = makeEl('div', 'pipeline-summary-banner');
