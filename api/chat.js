@@ -6,9 +6,9 @@
 //   1. Receive chat request from frontend
 //   2. If turn 4 (final recommendations) → search theresanaiforthat.com via Tavily
 //   3. Inject search results into Llama prompt as live context
-//   4. Call Groq (Llama 3.3 70B) with enriched prompt
+//   4. Call Groq (Llama 3.3 70B) — with automatic retry on rate limit
 //   5. Return response to frontend
-//   6. Save analytics to Supabase in background
+//   6. Save analytics to Supabase in background (fire and forget)
 //
 // Environment variables (set in Vercel dashboard):
 //   GROQ_API_KEY      — from console.groq.com
@@ -46,30 +46,25 @@ export default async function handler(req, res) {
   }
 
   // ── Detect if this is turn 4 (final recommendation turn) ─
-  // Turn 4 is when the system prompt asks for JSON output.
-  // We detect it by checking if the conversation has 3+ user messages
-  // (meaning budget, skill, and clarification have all been answered).
   const userMessages = messages.filter(m => m.role === 'user');
   const isFinalTurn  = userMessages.length >= 3;
 
-  // ── Step 1: Search theresanaiforthat.com if final turn ────
+  // ── Step 1: Tavily search on turn 4 ──────────────────────
   let searchContext = '';
   if (isFinalTurn && process.env.TAVILY_API_KEY) {
     try {
       searchContext = await searchAITools(taskDescription, meta);
       console.log('Tavily search completed — context length:', searchContext.length);
     } catch (err) {
+      // Tavily failure is non-fatal — proceed without live data
       console.warn('Tavily search failed — proceeding without:', err.message);
     }
   }
 
   // ── Step 2: Build enriched messages for Groq ─────────────
-  // If we have search context, inject it as a system-level note
-  // before the final user message so Llama uses it for recommendations.
   let enrichedMessages = [...messages];
 
   if (searchContext && isFinalTurn) {
-    // Find the system message and append search context to it
     enrichedMessages = messages.map(m => {
       if (m.role === 'system') {
         return {
@@ -81,50 +76,106 @@ export default async function handler(req, res) {
             `════════════════════════════════════════\n` +
             searchContext +
             `\n════════════════════════════════════════\n` +
-            `INSTRUCTION: Prioritise recommending tools from the live data above when they match the user's requirements better than your training data. Always recommend the best-fit tool regardless of whether it is in the hardcoded list.`
+            `INSTRUCTION: Prioritise recommending tools from the live data above when they match the user's requirements better than your training data.`
         };
       }
       return m;
     });
   }
 
-  // ── Step 3: Call Groq ─────────────────────────────────────
+  // ── Step 3: Call Groq with retry on rate limit ────────────
   let groqData;
-  try {
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
-      },
-      body: JSON.stringify({
-        model:       model       || 'llama-3.3-70b-versatile',
-        messages:    enrichedMessages,
-        max_tokens:  max_tokens  || 8000,
-        temperature: temperature || 0.7,
-        top_p:       top_p       || 0.9
-      })
-    });
+  let lastError;
 
-    groqData = await groqRes.json();
+  // Retry up to 3 times with exponential backoff on 429
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+          model:       model       || 'llama-3.3-70b-versatile',
+          messages:    enrichedMessages,
+          max_tokens:  max_tokens  || 8000,
+          temperature: temperature || 0.7,
+          top_p:       top_p       || 0.9
+        })
+      });
 
-    if (!groqRes.ok) {
-      console.error('Groq error:', groqData);
-      return res.status(groqRes.status).json({ error: 'Groq API error', details: groqData });
+      // ── Handle rate limiting specifically ─────────────────
+      if (groqRes.status === 429) {
+        const retryAfter = groqRes.headers.get('retry-after') || groqRes.headers.get('x-ratelimit-reset-requests');
+        const waitMs     = retryAfter ? parseFloat(retryAfter) * 1000 : attempt * 2000;
+
+        console.warn(`Groq rate limited on attempt ${attempt}. Waiting ${waitMs}ms before retry...`);
+        lastError = { status: 429, message: 'rate_limit_exceeded' };
+
+        if (attempt < 3) {
+          await sleep(waitMs);
+          continue; // retry
+        } else {
+          // All retries exhausted — return a user-friendly message
+          return res.status(429).json({
+            error: 'rate_limit',
+            message: 'NEXUS is experiencing high traffic right now. Please wait a moment and try again.'
+          });
+        }
+      }
+
+      // ── Handle other Groq errors ──────────────────────────
+      if (!groqRes.ok) {
+        const errBody = await groqRes.json().catch(() => ({ error: 'unknown' }));
+        console.error(`Groq error ${groqRes.status}:`, errBody);
+
+        // Don't retry on non-rate-limit errors
+        return res.status(groqRes.status).json({
+          error: 'groq_error',
+          details: errBody
+        });
+      }
+
+      // ── Success ───────────────────────────────────────────
+      groqData = await groqRes.json();
+      break; // exit retry loop
+
+    } catch (err) {
+      console.error(`Groq fetch error on attempt ${attempt}:`, err.message);
+      lastError = err;
+
+      if (attempt < 3) {
+        await sleep(attempt * 1500);
+        continue;
+      }
+
+      return res.status(500).json({
+        error: 'network_error',
+        message: 'Could not reach the AI service. Please check your connection and try again.'
+      });
     }
-
-  } catch (err) {
-    console.error('Groq fetch failed:', err.message);
-    return res.status(500).json({ error: 'Failed to reach Groq', details: err.message });
   }
 
-  // ── Step 4: Respond to client immediately ────────────────
+  if (!groqData) {
+    return res.status(500).json({ error: 'no_response', message: 'No response from AI service.' });
+  }
+
+  // ── Step 4: Respond to client immediately ─────────────────
   res.status(200).json(groqData);
 
-  // ── Step 5: Save analytics to Supabase (fire and forget) ─
+  // ── Step 5: Save analytics to Supabase (fire and forget) ──
   const replyText = groqData?.choices?.[0]?.message?.content || '';
   saveAnalytics({ sessionId, taskDescription, meta, messages, replyText })
     .catch(err => console.error('Supabase save failed:', err.message));
+}
+
+
+// ============================================================
+// SLEEP UTILITY
+// ============================================================
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 
@@ -134,24 +185,21 @@ export default async function handler(req, res) {
 async function searchAITools(taskDescription, meta) {
   if (!taskDescription) return '';
 
-  // Build a focused search query using task + domain context
   const domain = meta?.domain || '';
   const budget = meta?.budget || '';
-
-  // Construct query targeting theresanaiforthat.com specifically
-  const query = buildSearchQuery(taskDescription, domain, budget);
+  const query  = buildSearchQuery(taskDescription, domain, budget);
 
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      api_key:                process.env.TAVILY_API_KEY,
-      query:                  query,
-      search_depth:           'advanced',
-      include_domains:        ['theresanaiforthat.com'],
-      max_results:            8,
-      include_answer:         false,
-      include_raw_content:    false
+      api_key:             process.env.TAVILY_API_KEY,
+      query:               query,
+      search_depth:        'advanced',
+      include_domains:     ['theresanaiforthat.com'],
+      max_results:         8,
+      include_answer:      false,
+      include_raw_content: false
     })
   });
 
@@ -163,56 +211,39 @@ async function searchAITools(taskDescription, meta) {
   const data = await tavilyRes.json();
 
   if (!data.results || data.results.length === 0) {
-    // Fallback: search without domain restriction if no results
     return await searchAIToolsFallback(query);
   }
 
-  // Format results as clean context for Llama
   return formatSearchResults(data.results, query);
 }
 
-// Fallback search without domain restriction
 async function searchAIToolsFallback(query) {
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      api_key:      process.env.TAVILY_API_KEY,
-      query:        `best AI tools for ${query}`,
-      search_depth: 'basic',
-      max_results:  6,
+      api_key:        process.env.TAVILY_API_KEY,
+      query:          `best AI tools for ${query}`,
+      search_depth:   'basic',
+      max_results:    6,
       include_answer: false
     })
   });
 
   if (!tavilyRes.ok) return '';
-
   const data = await tavilyRes.json();
   if (!data.results?.length) return '';
   return formatSearchResults(data.results, query);
 }
 
-// Build smart search query from user context
 function buildSearchQuery(taskDescription, domain, budget) {
   const parts = [];
-
-  // Core task
-  parts.push(taskDescription.slice(0, 120)); // trim very long descriptions
-
-  // Add domain if known
-  if (domain && domain !== 'null') {
-    parts.push(domain);
-  }
-
-  // Add free filter if budget is free
-  if (budget && (budget.toLowerCase().includes('free') || budget === 'Free only')) {
-    parts.push('free');
-  }
-
+  parts.push(taskDescription.slice(0, 120));
+  if (domain && domain !== 'null') parts.push(domain);
+  if (budget && (budget.toLowerCase().includes('free') || budget === 'Free only')) parts.push('free');
   return parts.join(' ');
 }
 
-// Format Tavily results into clean text context for Llama
 function formatSearchResults(results, query) {
   if (!results || results.length === 0) return '';
 
@@ -225,7 +256,6 @@ function formatSearchResults(results, query) {
     const title   = (r.title   || 'Unknown Tool').trim();
     const url     = (r.url     || '').trim();
     const snippet = (r.content || r.snippet || '').trim().slice(0, 300);
-
     lines.push(`${i + 1}. ${title}`);
     if (url)     lines.push(`   URL: ${url}`);
     if (snippet) lines.push(`   Description: ${snippet}`);
@@ -248,15 +278,14 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
 
   const headers = {
     'Content-Type': 'application/json',
-    'apikey': SUPABASE_KEY,
+    'apikey':        SUPABASE_KEY,
     'Authorization': `Bearer ${SUPABASE_KEY}`,
-    'Prefer': 'return=minimal'
+    'Prefer':        'return=minimal'
   };
 
   const userId    = meta?.userId    || null;
   const userEmail = meta?.userEmail || null;
 
-  // Create session on first message
   if (meta?.isFirstMessage) {
     await dbInsert(SUPABASE_URL, headers, 'sessions', {
       id:            sessionId,
@@ -280,7 +309,6 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
     }
   }
 
-  // Save latest user message
   const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
   if (lastUserMsg) {
     await dbInsert(SUPABASE_URL, headers, 'messages', {
@@ -292,7 +320,6 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
     });
   }
 
-  // Save AI reply
   if (replyText) {
     await dbInsert(SUPABASE_URL, headers, 'messages', {
       session_id: sessionId,
@@ -303,7 +330,6 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
     });
   }
 
-  // Update session with final recommendations
   if (replyText.includes('|||JSON_START')) {
     try {
       const match = replyText.match(/\|\|\|JSON_START\s*([\s\S]*?)\s*\|\|\|JSON_END/);
@@ -327,10 +353,6 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
   }
 }
 
-
-// ============================================================
-// SUPABASE HELPERS
-// ============================================================
 async function dbInsert(url, headers, table, data) {
   try {
     const res = await fetch(`${url}/rest/v1/${table}`, {
