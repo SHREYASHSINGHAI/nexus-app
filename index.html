@@ -936,35 +936,56 @@ CRITICAL — Read the user's FIRST message carefully BEFORE asking any questions
 - Extract skill level if already stated (e.g. "I'm a beginner", "no coding experience" → skill = "Beginner")
 - Extract domain from the task description
 - Only ask questions for information NOT already provided
+- NEVER repeat or confirm what the user just told you — move straight to the next question
 
 TURN 1 (user describes task):
-• Acknowledge the task in 1 bullet
+• Acknowledge the task in 1 SHORT bullet — no repeating what they said
 • If task spans MULTIPLE domains: "• This task requires a multi-tool pipeline across [N] subtasks."
-• State detected domain(s)
-• IF budget already known → skip budget question, go straight to skill level
-• IF budget NOT mentioned → ask: "What is your budget?"
+• IF budget already known → skip budget question entirely, go to skill level or Turn 3
+• IF budget NOT mentioned → ask ONLY: "What is your budget?"
 • Output OPTIONS block ONLY if asking a question
 
-TURN 2 (after budget is known):
-• Confirm budget briefly
+TURN 2 (after budget answered):
+• Do NOT say "Got it", "Noted", "Thanks", or repeat their budget back to them
 • IF skill level already known → skip, go to Turn 3
-• IF skill level NOT mentioned → ask: "What is your technical skill level?"
+• IF skill level NOT mentioned → ask ONLY: "What is your technical skill level?"
 • Output OPTIONS block only if asking the question
 
-TURN 3 (after skill level is known):
-• Confirm skill level
+TURN 3 (after skill level answered):
+• Do NOT repeat or confirm their skill level
 • Ask ONE specific clarifying question about the USE CASE — NOT about tool preference
-• Good examples: "What is your primary output format?", "Do you need it to work offline?", "What is the approximate size of your dataset?", "Is this for a one-time task or ongoing use?"
-• BAD examples — NEVER ask: "Which tool do you prefer?", "Do you have a tool in mind?", "What tools have you tried?" — NEXUS decides the tool, the user does not
+• Good examples: "What is your primary output format?", "Do you need it to work offline?", "Is this for a one-time task or ongoing use?"
+• BAD examples — NEVER ask: "Which tool do you prefer?", "Do you have a tool in mind?" — NEXUS decides the tool
 • Output OPTIONS block with 3-4 relevant choices
 
-TURN 4 (generate final recommendations):
+TURN 4 (summary + confirmation — ONE TIME ONLY):
+• Show a single clean summary of EVERYTHING you understood. Format it as:
+"• Here is what I understood:
+  — Task: [one line]
+  — Budget: [value]
+  — Skill level: [value]
+  — Use case detail: [one line]"
+• Then ask ONE question: "• Is there anything else you'd like to add before I generate recommendations?"
+• Output this OPTIONS block:
+|||OPTIONS_START
+["No, generate recommendations", "Yes, I want to add something"]
+|||OPTIONS_END
+
+TURN 5a — If user says NO or "generate recommendations":
+• Immediately output the final JSON recommendation block. Do not write any other text.
+
+TURN 5b — If user says YES or adds something:
+• Acknowledge in 1 bullet: "• Got it — including that in the recommendations."
+• Immediately output the final JSON recommendation block. Do not write any other text.
+
+FINAL RECOMMENDATIONS FORMAT:
+When generating recommendations, you MUST output ONLY a JSON block.
 CRITICAL INSTRUCTION — THIS IS MANDATORY:
 - You MUST output ONLY a JSON block starting with |||JSON_START and ending with |||JSON_END
 - Do NOT write any text before |||JSON_START
 - Do NOT write any text after |||JSON_END
 - Do NOT write "Here's how you can proceed" or any prose
-- Do NOT write bullet points
+- Do NOT write bullet points outside the JSON
 - The ENTIRE response must be ONLY the JSON block — nothing else
 - If you write anything other than the JSON block, you have failed this task
 - Choose FORMAT A for single-domain tasks, FORMAT B for multi-domain pipeline tasks
@@ -1455,10 +1476,18 @@ async function sendMessage() {
     let reply = await callGroq(text);
     hideTyping();
 
-    // Detect if this is turn 4 (3+ user messages) but Llama skipped the JSON
-    const userCount = messages.filter(m => m.role === 'user').length;
-    const hasJSON   = reply.includes('|||JSON_START');
-    const isFinalTurn = userCount >= 3;
+    // Detect if JSON was expected but missing.
+    // JSON is expected when user is past the confirmation turn:
+    //   (a) 4+ user messages means we are definitely past confirmation, OR
+    //   (b) 3+ messages AND user just confirmed "no / generate / proceed"
+    const userCount   = messages.filter(m => m.role === 'user').length;
+    const hasJSON     = reply.includes('|||JSON_START');
+    const lastUserMsg = text.toLowerCase().trim();
+    const isConfirmNo = lastUserMsg.includes('no') ||
+                        lastUserMsg.includes('generate') ||
+                        lastUserMsg.includes('proceed') ||
+                        lastUserMsg.includes('yes, i want');
+    const isFinalTurn = userCount >= 4 || (userCount >= 3 && isConfirmNo);
 
     if (isFinalTurn && !hasJSON) {
       // Llama gave prose instead of JSON — force it with a direct retry message
