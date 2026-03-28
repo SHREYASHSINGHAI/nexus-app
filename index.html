@@ -119,12 +119,12 @@
 
   /* ── RESULTS ACTION BAR (PDF + Share) ── */
   .results-action-bar { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; flex-wrap: nowrap; align-items: center; }
-  .action-bar-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.4rem 0.9rem; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
-  .pdf-btn   { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3); color: #ff9999; }
-  .pdf-btn:hover   { background: rgba(255,107,107,0.2); border-color: var(--accent3); color: var(--accent3); }
-  .share-btn { background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.3); color: var(--accent2); }
-  .share-btn:hover { background: rgba(0,212,170,0.2); }
-  .share-copied { background: rgba(0,212,170,0.2) !important; }
+  .action-bar-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.45rem 1rem; border-radius: 7px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; flex-shrink: 0; }
+  .pdf-btn         { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.35); color: #ff9999; }
+  .pdf-btn:hover   { background: rgba(255,107,107,0.22); border-color: var(--accent3); color: var(--accent3); }
+  .share-btn       { background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.35); color: var(--accent2); }
+  .share-btn:hover { background: rgba(0,212,170,0.22); }
+  .share-copied    { background: rgba(0,212,170,0.25) !important; }
 
   /* ── EMPTY STATE ── */
   .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; gap: 1rem; padding: 3rem; }
@@ -634,7 +634,6 @@ function renderHistoryList(sessions, query = '') {
 
 async function reopenSession(session) {
   closeHistory();
-  // Load messages for this session and reconstruct the conversation
   try {
     const { data: msgs } = await sb
       .from('messages')
@@ -642,24 +641,54 @@ async function reopenSession(session) {
       .eq('session_id', session.id)
       .order('created_at', { ascending: true });
     if (!msgs?.length) return;
-    // Clear current state
+
+    // Reset state
     messages = []; isFirstMessage = false;
     document.getElementById('messages').innerHTML = '';
-    document.getElementById('resultsPanel').innerHTML = '<div class="empty-state"><div class="empty-icon">⏱</div><div class="empty-title">Loading session...</div></div>';
-    // Replay messages visually
-    msgs.forEach(m => addMessage(m.role === 'user' ? 'user' : 'ai', m.content));
-    // Try to render the last AI message as recommendations
-    const lastAI = [...msgs].reverse().find(m => m.role === 'assistant');
-    if (lastAI) parseAndRenderTools(lastAI.content);
+    document.getElementById('resultsPanel').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⏱</div>
+        <div class="empty-title">Restoring session...</div>
+      </div>`;
+
+    // Replay chat messages — strip all markers so raw JSON/OPTIONS never show
+    msgs.forEach(m => {
+      const isAI   = m.role === 'assistant';
+      const cleaned = stripMarkers(m.content || '');
+      // Skip empty messages after stripping
+      if (!cleaned.trim()) return;
+      addMessage(isAI ? 'ai' : 'user', cleaned);
+    });
+
+    // Restore recommendations panel from last AI message that had JSON
+    const lastAIWithJSON = [...msgs].reverse().find(m =>
+      m.role === 'assistant' && m.content && m.content.includes('|||JSON_START')
+    );
+    if (lastAIWithJSON) {
+      parseAndRenderTools(lastAIWithJSON.content);
+    } else {
+      // No JSON found — just restore empty state cleanly
+      document.getElementById('resultsPanel').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">◈</div>
+          <div class="empty-title">Session Restored</div>
+          <div class="empty-sub">This session did not complete to recommendations. Continue the conversation below.</div>
+        </div>`;
+    }
+
+    // Restore conversation context so user can continue
     messages = msgs.map(m => ({ role: m.role, content: m.content }));
-  } catch(e) { console.warn('Could not reopen session:', e.message); }
+
+  } catch(e) {
+    console.warn('Could not reopen session:', e.message);
+  }
 }
 
 // ── SHARE RECOMMENDATION ──────────────────────────────────────
 let currentShareId = null;
 
 async function shareRecommendation() {
-  const btn = document.querySelector('.share-btn');
+  const btn = document.getElementById('shareBtnMain') || document.querySelector('#resultsPanel .share-btn');
   if (!btn) return;
   btn.textContent = '⏳ Creating link...';
   try {
@@ -930,7 +959,17 @@ TURN 3 (after skill level is known):
 • Output OPTIONS block with 3-4 relevant choices
 
 TURN 4 (generate final recommendations):
-Analyse all requirements. Use LIVE SEARCH DATA if provided. Output ONE of:
+CRITICAL INSTRUCTION — THIS IS MANDATORY:
+- You MUST output ONLY a JSON block starting with |||JSON_START and ending with |||JSON_END
+- Do NOT write any text before |||JSON_START
+- Do NOT write any text after |||JSON_END
+- Do NOT write "Here's how you can proceed" or any prose
+- Do NOT write bullet points
+- The ENTIRE response must be ONLY the JSON block — nothing else
+- If you write anything other than the JSON block, you have failed this task
+- Choose FORMAT A for single-domain tasks, FORMAT B for multi-domain pipeline tasks
+
+Output EXACTLY ONE of these two formats with no other text:
 
 ─── FORMAT A: SINGLE-TOOL TASK ───
 |||JSON_START
@@ -1045,13 +1084,15 @@ function formatBullets(text) {
 function addMessage(role, content, options = null) {
   const el  = document.createElement('div');
   el.className = 'message';
-  const uid = Date.now() + Math.random();
+  const uid  = Date.now() + Math.random();
   const isAI = role === 'ai' || role === 'assistant';
+  // Always strip markers from AI messages — prevents raw |||OPTIONS_START showing
+  const display = isAI ? formatBullets(stripMarkers(content || '')) : (content || '');
   el.innerHTML = `
     <div class="msg-avatar ${isAI ? 'ai' : 'user'}">${isAI ? 'NX' : 'U'}</div>
     <div class="msg-bubble">
       <div class="msg-sender">${isAI ? 'NEXUS' : 'YOU'}</div>
-      <div class="msg-content ${isAI ? 'ai-msg' : 'user-msg'}">${isAI ? formatBullets(content) : content}</div>
+      <div class="msg-content ${isAI ? 'ai-msg' : 'user-msg'}">${display}</div>
       ${options ? buildOptionsHTML(options, uid) : ''}
     </div>`;
   const msgs = document.getElementById('messages');
@@ -1124,7 +1165,7 @@ function renderSingle(data) {
   const bar = makeEl('div', 'results-action-bar');
   bar.innerHTML = `
     <button class="action-bar-btn pdf-btn" onclick="exportToPDF()">⬇ Download PDF</button>
-    <button class="action-bar-btn share-btn" onclick="shareRecommendation()">🔗 Share</button>`;
+    <button class="action-bar-btn share-btn" id="shareBtnMain" onclick="shareRecommendation()">🔗 Share</button>`;
   panel.appendChild(bar);
 
   const nb = makeEl('div', 'neutrality-banner');
@@ -1169,7 +1210,7 @@ function renderPipeline(data) {
   const bar = makeEl('div', 'results-action-bar');
   bar.innerHTML = `
     <button class="action-bar-btn pdf-btn" onclick="exportToPDF()">⬇ Download PDF</button>
-    <button class="action-bar-btn share-btn" onclick="shareRecommendation()">🔗 Share</button>`;
+    <button class="action-bar-btn share-btn" id="shareBtnMain" onclick="shareRecommendation()">🔗 Share</button>`;
   panel.appendChild(bar);
 
   const sb2 = makeEl('div', 'pipeline-summary-banner');
@@ -1411,14 +1452,45 @@ async function sendMessage() {
   showTyping();
 
   try {
-    const reply = await callGroq(text);
+    let reply = await callGroq(text);
     hideTyping();
+
+    // Detect if this is turn 4 (3+ user messages) but Llama skipped the JSON
+    const userCount = messages.filter(m => m.role === 'user').length;
+    const hasJSON   = reply.includes('|||JSON_START');
+    const isFinalTurn = userCount >= 3;
+
+    if (isFinalTurn && !hasJSON) {
+      // Llama gave prose instead of JSON — force it with a direct retry message
+      showTyping();
+      addMessage('ai', '• Generating structured recommendations...');
+      const retryReply = await callGroq(
+        'Output the final recommendations NOW using ONLY the |||JSON_START ... |||JSON_END format. ' +
+        'Do not write any text outside the JSON block. ' +
+        'Use all requirements gathered so far.'
+      );
+      hideTyping();
+      reply = retryReply;
+    }
+
     const toolResult = parseAndRenderTools(reply);
-    if (toolResult !== null) addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded →');
-    else addMessage('ai', stripMarkers(reply), parseOptions(reply));
+    if (toolResult !== null) {
+      addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded →');
+    } else {
+      addMessage('ai', stripMarkers(reply), parseOptions(reply));
+    }
   } catch(e) {
     hideTyping();
-    addMessage('ai', '• Connection error. Please try again.');
+    let errMsg = '• Connection error. Please try again.';
+    try {
+      const parsed = JSON.parse(e.message);
+      if (parsed.error === 'rate_limit') {
+        errMsg = '• NEXUS is experiencing high traffic right now.\n• Please wait 30 seconds and try again.';
+      } else if (parsed.error === 'network_error') {
+        errMsg = '• Could not reach the AI service.\n• Please check your connection and try again.';
+      }
+    } catch(_) { /* use default message */ }
+    addMessage('ai', errMsg);
     console.error('Groq error:', e);
   }
   isThinking = false;
