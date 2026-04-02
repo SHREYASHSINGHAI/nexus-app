@@ -33,8 +33,7 @@
   body.light-mode .msg-content.ai-msg { background: #ffffff; border-color: #d0d0c8; }
   body.light-mode .input-area         { background: rgba(245,245,240,0.8); }
   body.light-mode .auth-modal-box     { background: #ffffff; border-color: #d0d0c8; }
-  body.light-mode .history-card       { background: #ffffff; border-color: #d0d0c8; }
-  body.light-mode .history-panel      { background: #f5f5f0; }
+  body.light-mode .burger-menu        { background: #ffffff; border-color: #c8c8c0; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
@@ -53,10 +52,19 @@
   .auth-header-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.35rem 0.85rem; border-radius: 6px; background: rgba(124,92,252,0.15); border: 1px solid rgba(124,92,252,0.4); color: var(--accent); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
   .auth-header-btn:hover { background: rgba(124,92,252,0.25); }
   .auth-header-btn.signed-in { background: rgba(0,212,170,0.1); border-color: rgba(0,212,170,0.35); color: var(--accent2); }
-  .history-header-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.35rem 0.85rem; border-radius: 6px; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-  .history-header-btn:hover { border-color: var(--accent2); color: var(--accent2); }
-  .reset-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.3rem 0.7rem; border-radius: 6px; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all 0.2s; }
-  .reset-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+  /* ── BURGER MENU ── */
+  .burger-btn { width: 36px; height: 36px; border-radius: 8px; background: transparent; border: 1px solid var(--border); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; flex-shrink: 0; padding: 0; }
+  .burger-btn:hover { border-color: var(--accent); background: rgba(124,92,252,0.08); }
+  .burger-btn span { display: block; width: 14px; height: 1.5px; background: var(--muted); border-radius: 2px; transition: all 0.2s; }
+  .burger-btn:hover span { background: var(--accent); }
+  .burger-menu { position: absolute; top: calc(100% + 0.5rem); right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.5rem; min-width: 200px; box-shadow: 0 8px 32px rgba(0,0,0,0.35); z-index: 300; opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.16,1,0.3,1); }
+  .burger-menu.open { opacity: 1; transform: translateY(0); pointer-events: all; }
+  .burger-menu-item { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.65rem 0.9rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.7rem; color: var(--text); transition: all 0.15s; border: none; background: transparent; width: 100%; text-align: left; }
+  .burger-menu-item:hover { background: var(--surface2); color: var(--accent); }
+  .burger-menu-item.danger:hover { background: rgba(255,107,107,0.08); color: var(--accent3); }
+  .burger-menu-item.signed-in-item { color: var(--accent2); }
+  .burger-menu-item.signed-in-item:hover { background: rgba(0,212,170,0.08); color: var(--accent2); }
+  .burger-menu-divider { height: 1px; background: var(--border); margin: 0.3rem 0.5rem; }
 
   /* ── LAYOUT ── */
   .app-container { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; padding-top: 65px; position: relative; z-index: 1; }
@@ -304,28 +312,6 @@
   .login-banner-btn   { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.5rem 1rem; background: var(--accent); border: none; border-radius: 8px; color: white; cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
   .login-banner-btn:hover { background: #9b7afe; }
 
-  /* ── HISTORY PANEL ── */
-  .history-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); z-index: 200; display: flex; justify-content: flex-end; animation: fadeIn 0.2s ease; }
-  .history-panel { width: 420px; max-width: 95vw; background: var(--surface); border-left: 1px solid var(--border); height: 100%; overflow-y: auto; padding: 0; display: flex; flex-direction: column; animation: slideFromRight 0.3s cubic-bezier(0.16,1,0.3,1); }
-  @keyframes slideFromRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-  .history-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--surface); z-index: 1; }
-  .history-title  { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; letter-spacing: 0.1em; color: var(--highlight); }
-  .history-close  { background: transparent; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; }
-  .history-close:hover { background: var(--surface2); color: var(--text); }
-  .history-list   { padding: 1rem; display: flex; flex-direction: column; gap: 0.8rem; flex: 1; }
-  .history-empty  { text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.8rem; line-height: 1.8; }
-  .history-card   { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.2s; }
-  .history-card:hover { border-color: var(--accent); background: rgba(124,92,252,0.06); }
-  .history-card-task  { font-size: 0.82rem; color: var(--text); line-height: 1.4; margin-bottom: 0.6rem; font-weight: 500; }
-  .history-card-meta  { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
-  .history-card-date  { font-size: 0.62rem; color: var(--muted); }
-  .history-card-tools { display: flex; gap: 0.3rem; flex-wrap: wrap; }
-  .history-tool-chip  { font-size: 0.58rem; letter-spacing: 0.08em; padding: 0.15rem 0.45rem; background: rgba(124,92,252,0.12); border: 1px solid rgba(124,92,252,0.25); border-radius: 4px; color: #a78bfa; text-transform: uppercase; }
-  .history-search { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 64px; z-index: 1; }
-  .history-search input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; outline: none; transition: border-color 0.2s; }
-  .history-search input:focus { border-color: var(--accent); }
-  .history-search input::placeholder { color: var(--muted); }
-
   /* ── SHARE TOAST ── */
   .share-toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent2); border-radius: 10px; padding: 0.8rem 1.2rem; font-size: 0.78rem; color: var(--accent2); display: flex; align-items: center; gap: 0.6rem; z-index: 600; animation: toastIn 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
   @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
@@ -341,7 +327,6 @@
     .chat-panel    { height: 60vh; position: relative; top: 0; border-right: none; border-bottom: 1px solid var(--border); }
     .results-panel { height: auto; }
     .header-tag    { display: none; }
-    .history-panel { width: 100%; }
   }
 </style>
 </head>
@@ -352,7 +337,7 @@
   <div class="auth-modal-box">
     <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
     <div class="auth-modal-logo">◈ NEXUS</div>
-    <div class="auth-modal-subtitle">Sign in to save your recommendations<br>and access your history anywhere.</div>
+    <div class="auth-modal-subtitle">Sign in to save your recommendations<br>and get unlimited searches.</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabSignIn" onclick="switchTab('signin')">Sign In</button>
       <button class="auth-tab"        id="tabSignUp" onclick="switchTab('signup')">Sign Up</button>
@@ -370,31 +355,24 @@
   </div>
 </div>
 
-<!-- ── HISTORY PANEL ── -->
-<div class="history-overlay" id="historyOverlay" style="display:none;" onclick="handleHistoryOverlayClick(event)">
-  <div class="history-panel">
-    <div class="history-header">
-      <div class="history-title">◈ Session History</div>
-      <button class="history-close" onclick="closeHistory()">✕</button>
-    </div>
-    <div class="history-search">
-      <input type="text" id="historySearch" placeholder="Search sessions..." oninput="filterHistory(this.value)" />
-    </div>
-    <div class="history-list" id="historyList">
-      <div class="history-loading">Loading your sessions...</div>
-    </div>
-  </div>
-</div>
-
 <!-- ── HEADER ── -->
 <header>
   <div class="logo" onclick="resetApp()"><div class="logo-dot"></div>NEXUS</div>
   <div class="header-tag">AI Tool Intelligence System</div>
-  <div class="header-controls">
+  <div class="header-controls" style="position:relative;">
     <button class="theme-toggle-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
-    <button class="history-header-btn" id="historyBtn" onclick="openHistory()" style="display:none;">⏱ History</button>
-    <button class="auth-header-btn" id="authHeaderBtn" onclick="handleAuthBtnClick()">Sign In</button>
-    <button class="reset-btn" onclick="resetApp()">↺ Reset</button>
+    <button class="burger-btn" id="burgerBtn" title="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="burger-menu" id="burgerMenu">
+      <button class="burger-menu-item" id="burgerAuthItem" onclick="handleAuthBtnClick();closeBurgerMenu()">
+        <span>👤</span><span id="burgerAuthLabel">Sign In</span>
+      </button>
+      <div class="burger-menu-divider"></div>
+      <button class="burger-menu-item danger" onclick="resetApp();closeBurgerMenu()">
+        <span>↺</span><span>Reset</span>
+      </button>
+    </div>
   </div>
 </header>
 
@@ -453,24 +431,55 @@ async function initSupabase() {
 }
 
 function updateAuthUI() {
-  const btn     = document.getElementById('authHeaderBtn');
-  const histBtn = document.getElementById('historyBtn');
-  if (!btn) return;
+  const label = document.getElementById('burgerAuthLabel');
+  const item  = document.getElementById('burgerAuthItem');
+  if (!label) return;
   if (currentUser) {
-    btn.textContent = `● ${(currentUser.email||'').split('@')[0].slice(0,16)}`;
-    btn.classList.add('signed-in');
-    if (histBtn) histBtn.style.display = 'block';
+    const short = (currentUser.email || '').split('@')[0].slice(0, 16);
+    label.textContent = `● ${short}`;
+    if (item) item.classList.add('signed-in-item');
   } else {
-    btn.textContent = 'Sign In';
-    btn.classList.remove('signed-in');
-    if (histBtn) histBtn.style.display = 'none';
+    label.textContent = 'Sign In';
+    if (item) item.classList.remove('signed-in-item');
   }
 }
 
+function toggleBurgerMenu() {
+  const menu = document.getElementById('burgerMenu');
+  if (menu) menu.classList.toggle('open');
+}
+
+function closeBurgerMenu() {
+  const menu = document.getElementById('burgerMenu');
+  if (menu) menu.classList.remove('open');
+}
+
+// Attach burger button click + outside-click listener after DOM is ready
+window.addEventListener('DOMContentLoaded', function() {
+  const burgerBtn = document.getElementById('burgerBtn');
+  if (burgerBtn) {
+    burgerBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleBurgerMenu();
+    });
+  }
+  document.addEventListener('click', function(e) {
+    const menu   = document.getElementById('burgerMenu');
+    const burger = document.getElementById('burgerBtn');
+    if (menu && burger && !burger.contains(e.target) && !menu.contains(e.target)) {
+      closeBurgerMenu();
+    }
+  });
+});
+
 function handleAuthBtnClick() {
   if (!sb) return;
-  if (currentUser) { if (confirm(`Sign out of ${currentUser.email}?`)) sb.auth.signOut(); }
-  else openAuthModal();
+  if (currentUser) {
+    if (confirm(`Sign out of ${currentUser.email}?`)) sb.auth.signOut();
+  } else {
+    openAuthModal();
+  }
+}
 }
 
 function openAuthModal() {
@@ -540,176 +549,107 @@ function showSessionLimitBanner() {
   document.getElementById('sessionLimitBanner').style.display = 'block';
 }
 
-// ── HISTORY PANEL ─────────────────────────────────────────────
-function openHistory() {
-  if (!currentUser) { openAuthModal(); return; }
-  document.getElementById('historyOverlay').style.display = 'flex';
-  loadHistory();
-}
-function closeHistory() { document.getElementById('historyOverlay').style.display = 'none'; }
-function handleHistoryOverlayClick(e) { if (e.target === e.currentTarget) closeHistory(); }
+// ── SHARE RECOMMENDATION ─────────────────────────────────────
+// Encodes the full recommendation + conversation into the URL itself.
+// No backend needed — the link IS the data. Anyone opening it sees
+// the exact same recommendations and chat that the sharer saw.
 
-// Generates a human-readable title for a session card
-function generateSessionTitle(session) {
-  // Priority 1: use task description (raw first message — most descriptive)
-  if (session.task_description && session.task_description.trim().length > 3) {
-    const t = session.task_description.trim();
-    return t.length > 80 ? t.slice(0, 80) + '…' : t;
-  }
-  // Priority 2: build title from recommended tools + domain
-  const tools  = (session.recommended_tools || []).slice(0, 2);
-  const domain = session.domain ? session.domain.charAt(0).toUpperCase() + session.domain.slice(1) : '';
-  if (tools.length && domain) return `${domain} — ${tools.join(', ')}`;
-  if (tools.length)            return tools.join(' · ');
-  if (domain)                  return `${domain} task`;
-  // Fallback
-  const date = new Date(session.created_at);
-  return `Session — ${date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
-}
-
-let cachedSessions = []; // cached for instant search filtering
-
-async function loadHistory() {
-  const list = document.getElementById('historyList');
-  list.innerHTML = '<div class="history-loading">Loading your sessions...</div>';
-  // Clear search box
-  const searchEl = document.getElementById('historySearch');
-  if (searchEl) searchEl.value = '';
-
-  try {
-    const { data: sessions, error } = await sb
-      .from('sessions')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false })
-      .limit(100);
-    if (error) throw error;
-    cachedSessions = sessions || [];
-    renderHistoryList(cachedSessions);
-  } catch(e) {
-    list.innerHTML = `<div class="history-empty">Could not load history.<br>${e.message}</div>`;
-  }
-}
-
-function filterHistory(query) {
-  if (!query.trim()) { renderHistoryList(cachedSessions); return; }
-  const q = query.toLowerCase();
-  const filtered = cachedSessions.filter(s => {
-    const title = generateSessionTitle(s).toLowerCase();
-    const tools = (s.recommended_tools || []).join(' ').toLowerCase();
-    const domain = (s.domain || '').toLowerCase();
-    return title.includes(q) || tools.includes(q) || domain.includes(q);
-  });
-  renderHistoryList(filtered, query);
-}
-
-function renderHistoryList(sessions, query = '') {
-  const list = document.getElementById('historyList');
-  if (!sessions?.length) {
-    list.innerHTML = query
-      ? `<div class="history-empty">No sessions match "<strong>${escHtml(query)}</strong>"</div>`
-      : '<div class="history-empty">No sessions yet.<br>Start a conversation and your recommendations will appear here.</div>';
-    return;
-  }
-  list.innerHTML = '';
-  sessions.forEach(session => {
-    const card  = document.createElement('div');
-    card.className = 'history-card';
-    const date  = new Date(session.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-    const title = generateSessionTitle(session);
-    const tools = (session.recommended_tools || []).slice(0, 3);
-    card.innerHTML = `
-      <div class="history-card-task">${escHtml(title)}</div>
-      <div class="history-card-meta">
-        <span class="history-card-date">${date}</span>
-        <div class="history-card-tools">
-          ${tools.map(t => `<span class="history-tool-chip">${escHtml(t.split(' ')[0])}</span>`).join('')}
-          ${session.pipeline_mode ? '<span class="history-tool-chip" style="color:var(--accent2);border-color:rgba(0,212,170,0.3);">Pipeline</span>' : ''}
-        </div>
-      </div>`;
-    card.onclick = () => reopenSession(session);
-    list.appendChild(card);
-  });
-}
-
-async function reopenSession(session) {
-  closeHistory();
-  try {
-    const { data: msgs } = await sb
-      .from('messages')
-      .select('*')
-      .eq('session_id', session.id)
-      .order('created_at', { ascending: true });
-    if (!msgs?.length) return;
-
-    // Reset state
-    messages = []; isFirstMessage = false;
-    document.getElementById('messages').innerHTML = '';
-    document.getElementById('resultsPanel').innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">⏱</div>
-        <div class="empty-title">Restoring session...</div>
-      </div>`;
-
-    // Replay chat messages — strip all markers so raw JSON/OPTIONS never show
-    msgs.forEach(m => {
-      const isAI   = m.role === 'assistant';
-      const cleaned = stripMarkers(m.content || '');
-      // Skip empty messages after stripping
-      if (!cleaned.trim()) return;
-      addMessage(isAI ? 'ai' : 'user', cleaned);
-    });
-
-    // Restore recommendations panel from last AI message that had JSON
-    const lastAIWithJSON = [...msgs].reverse().find(m =>
-      m.role === 'assistant' && m.content && m.content.includes('|||JSON_START')
-    );
-    if (lastAIWithJSON) {
-      parseAndRenderTools(lastAIWithJSON.content);
-    } else {
-      // No JSON found — just restore empty state cleanly
-      document.getElementById('resultsPanel').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">◈</div>
-          <div class="empty-title">Session Restored</div>
-          <div class="empty-sub">This session did not complete to recommendations. Continue the conversation below.</div>
-        </div>`;
-    }
-
-    // Restore conversation context so user can continue
-    messages = msgs.map(m => ({ role: m.role, content: m.content }));
-
-  } catch(e) {
-    console.warn('Could not reopen session:', e.message);
-  }
-}
-
-// ── SHARE RECOMMENDATION ──────────────────────────────────────
-let currentShareId = null;
-
-async function shareRecommendation() {
+function shareRecommendation() {
   const btn = document.getElementById('shareBtnMain') || document.querySelector('#resultsPanel .share-btn');
   if (!btn) return;
-  btn.textContent = '⏳ Creating link...';
+
+  if (!lastRecommendationData) {
+    alert('No recommendations to share yet.');
+    return;
+  }
+
   try {
-    const res  = await fetch('/api/share', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: SESSION_ID })
-    });
-    const data = await res.json();
-    if (!data.shareId) throw new Error('No share ID returned');
-    currentShareId = data.shareId;
-    const shareUrl = `${window.location.origin}/r/${data.shareId}`;
+    btn.textContent = '⏳ Building link...';
+
+    // Package the conversation + recommendation data
+    const payload = {
+      v:    1,                          // version for future compatibility
+      ts:   Date.now(),                 // timestamp
+      task: firstTaskDescription || '',
+      data: lastRecommendationData,     // full JSON recommendation object
+      msgs: messages                    // full conversation history
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({ role: m.role, content: stripMarkers(m.content || '') }))
+        .filter(m => m.content.trim().length > 0)
+    };
+
+    // Encode as base64 URL param
+    const encoded  = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    const shareUrl = `${window.location.origin}?shared=${encoded}`;
+
     // Copy to clipboard
-    await navigator.clipboard.writeText(shareUrl).catch(() => {});
-    btn.textContent = '✓ Link copied!';
-    btn.classList.add('share-copied');
-    showShareToast(shareUrl);
-    setTimeout(() => { btn.textContent = '🔗 Share'; btn.classList.remove('share-copied'); }, 3000);
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        btn.textContent = '✓ Link copied!';
+        btn.classList.add('share-copied');
+        showShareToast(shareUrl);
+        setTimeout(() => { btn.textContent = '🔗 Share'; btn.classList.remove('share-copied'); }, 3000);
+      })
+      .catch(() => {
+        // Fallback for browsers without clipboard API
+        fallbackCopy(shareUrl);
+        btn.textContent = '✓ Link copied!';
+        btn.classList.add('share-copied');
+        showShareToast(shareUrl);
+        setTimeout(() => { btn.textContent = '🔗 Share'; btn.classList.remove('share-copied'); }, 3000);
+      });
+
   } catch(e) {
     btn.textContent = '🔗 Share';
+    console.error('Share error:', e);
     alert('Could not create share link. Please try again.');
+  }
+}
+
+// ── LOAD SHARED RECOMMENDATION ────────────────────────────────
+// Called on page init. If URL has ?shared=..., decode and render it.
+
+function loadSharedIfPresent() {
+  const params  = new URLSearchParams(window.location.search);
+  const encoded = params.get('shared');
+  if (!encoded) return false;
+
+  try {
+    const payload = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+    if (!payload?.data) return false;
+
+    // Clear the ?shared= from the URL bar so it looks clean
+    window.history.replaceState({}, '', window.location.pathname);
+
+    // Show a shared banner in the header
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:65px;left:0;right:0;z-index:90;background:rgba(124,92,252,0.12);border-bottom:1px solid rgba(124,92,252,0.3);padding:0.5rem 2rem;font-size:0.72rem;color:var(--accent);display:flex;align-items:center;gap:0.8rem;';
+    banner.innerHTML = `<span>🔗 Shared recommendation</span><span style="color:var(--muted);font-size:0.65rem;">${payload.task ? '— ' + payload.task.slice(0, 60) : ''}</span><button onclick="this.parentElement.remove();document.querySelector('.app-container').style.paddingTop='0'" style="margin-left:auto;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1rem;">✕</button>`;
+    document.body.appendChild(banner);
+    document.querySelector('.app-container').style.paddingTop = '30px';
+
+    // Replay the conversation in the chat panel
+    if (payload.msgs?.length) {
+      document.getElementById('messages').innerHTML = '';
+      payload.msgs.forEach(m => addMessage(m.role === 'user' ? 'user' : 'ai', m.content));
+    }
+
+    // Render the recommendations in the right panel
+    lastRecommendationData = payload.data;
+    payload.data.mode === 'pipeline'
+      ? renderPipeline(payload.data)
+      : renderSingle(payload.data);
+
+    // Restore state so conversation can continue if desired
+    messages = payload.msgs || [];
+    isFirstMessage = false;
+    firstTaskDescription = payload.task || '';
+
+    return true;
+
+  } catch(e) {
+    console.warn('Could not load shared recommendation:', e.message);
+    return false;
   }
 }
 
@@ -719,15 +659,21 @@ function showShareToast(url) {
   const toast = document.createElement('div');
   toast.className = 'share-toast';
   toast.id = 'shareToast';
-  toast.innerHTML = `<span>🔗 Share link ready</span><button class="share-toast-copy" onclick="copyShareUrl('${url}')">Copy URL</button>`;
+  // Store URL in dataset — avoids inline attribute escaping issues with long encoded URLs
+  toast.innerHTML = `<span>🔗 Link copied to clipboard!</span><button class="share-toast-copy" id="shareToastCopyBtn">Copy again</button>`;
   document.body.appendChild(toast);
+  // Attach click handler safely via JS, not inline onclick
+  document.getElementById('shareToastCopyBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(url).catch(() => fallbackCopy(url));
+    document.getElementById('shareToastCopyBtn').textContent = '✓ Copied';
+  });
   setTimeout(() => { if (toast.parentNode) toast.remove(); }, 5000);
 }
 
 function copyShareUrl(url) {
-  navigator.clipboard.writeText(url).catch(() => {});
+  navigator.clipboard.writeText(url).catch(() => fallbackCopy(url));
   const btn = document.querySelector('.share-toast-copy');
-  if (btn) { btn.textContent = '✓ Copied'; }
+  if (btn) btn.textContent = '✓ Copied';
 }
 
 // ── LOGIN BANNER ──────────────────────────────────────────────
@@ -1576,22 +1522,33 @@ function addWelcomeMessage() {
 // ── THEME ─────────────────────────────────────────────────────
 function toggleTheme() {
   const isLight = document.body.classList.toggle('light-mode');
-  document.getElementById('themeBtn').textContent = isLight ? '☀️' : '🌙';
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.textContent = isLight ? '☀️' : '🌙';
   localStorage.setItem('nexus-theme', isLight ? 'light' : 'dark');
 }
+
+// Apply saved theme immediately — runs synchronously so no flash
 (function() {
   if (localStorage.getItem('nexus-theme') === 'light') {
     document.body.classList.add('light-mode');
-    document.addEventListener('DOMContentLoaded', () => {
+    // Update button emoji as soon as it's available
+    window.addEventListener('DOMContentLoaded', function() {
       const btn = document.getElementById('themeBtn');
       if (btn) btn.textContent = '☀️';
     });
+    // Also try immediately in case DOM is already parsed
+    const btn = document.getElementById('themeBtn');
+    if (btn) btn.textContent = '☀️';
   }
 })();
 
 // ── INIT ──────────────────────────────────────────────────────
 initSupabase();
-addWelcomeMessage();
+// If a shared link is opened, render the shared recommendation.
+// Otherwise show the normal welcome message.
+if (!loadSharedIfPresent()) {
+  addWelcomeMessage();
+}
 </script>
 </body>
 </html>
