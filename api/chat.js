@@ -45,6 +45,50 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'messages array is required' });
   }
 
+  // ── Anonymous session rate limiting ──────────────────────────
+  if (!meta?.userId) {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() 
+               || req.socket?.remoteAddress 
+               || 'unknown';
+    
+    // Hash the IP so you never store raw IPs (privacy-friendly)
+    const ipHash = require('crypto')
+      .createHash('sha256')
+      .update(ip + (process.env.RATE_LIMIT_SALT || 'salt123'))
+      .digest('hex')
+      .slice(0, 16);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const limitKey = `anon_limit_${ipHash}_${today}`;
+
+    // Read current count from Supabase
+    const countRes = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/rate_limits?key=eq.${limitKey}&select=count`,
+      { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` } }
+    );
+    const countData = await countRes.json();
+    const currentCount = countData?.[0]?.count || 0;
+
+    if (currentCount >= 5) {
+      return res.status(429).json({ 
+        error: 'session_limit',
+        message: 'Daily limit reached. Sign in for unlimited access.' 
+      });
+    }
+
+    // Upsert the counter
+    await fetch(`${process.env.SUPABASE_URL}/rest/v1/rate_limits`, {
+      method: 'POST',
+      headers: {
+        apikey: process.env.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key: limitKey, count: currentCount + 1, updated_at: new Date().toISOString() })
+    });
+  }
+
   // ── Detect if this is turn 4 (final recommendation turn) ─
   const userMessages = messages.filter(m => m.role === 'user');
   const isFinalTurn  = userMessages.length >= 3;

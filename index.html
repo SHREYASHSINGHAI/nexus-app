@@ -911,7 +911,16 @@ async function callGroq(userMessage) {
               userId: currentUser?.id || null, userEmail: currentUser?.email || null }
     })
   });
-  if (!response.ok) { const err = await response.json(); throw new Error(JSON.stringify(err)); }
+  if (!response.ok) {
+    const err = await response.json();
+    if (response.status === 429 && err.error === 'session_limit') {
+      hideTyping();
+      showSessionLimitBanner();
+      isThinking = false;
+      throw new Error(JSON.stringify({ error: 'session_limit' }));
+    }
+    throw new Error(JSON.stringify(err));
+  }
   isFirstMessage = false;
   const data  = await response.json();
   const reply = data.choices[0].message.content;
@@ -1344,6 +1353,11 @@ async function sendMessage() {
         errMsg = '• NEXUS is experiencing high traffic right now.\n• Please wait 30 seconds and try again.';
       } else if (parsed.error === 'network_error') {
         errMsg = '• Could not reach the AI service.\n• Please check your connection and try again.';
+      } else if (parsed.error === 'session_limit') {
+        hideTyping();
+        showSessionLimitBanner();
+        isThinking = false;
+        return;
       }
     } catch(_) { /* use default message */ }
     addMessage('ai', errMsg);
