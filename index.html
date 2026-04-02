@@ -33,8 +33,6 @@
   body.light-mode .msg-content.ai-msg { background: #ffffff; border-color: #d0d0c8; }
   body.light-mode .input-area         { background: rgba(245,245,240,0.8); }
   body.light-mode .auth-modal-box     { background: #ffffff; border-color: #d0d0c8; }
-  body.light-mode .history-card       { background: #ffffff; border-color: #d0d0c8; }
-  body.light-mode .history-panel      { background: #f5f5f0; }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; min-height: 100vh; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
@@ -48,15 +46,20 @@
   @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(0.7); } }
   .header-tag { font-size: 0.65rem; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
   .header-controls { display: flex; gap: 0.6rem; align-items: center; }
-  .theme-toggle-btn { font-size: 1rem; width: 36px; height: 36px; border-radius: 50%; background: transparent; border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; flex-shrink: 0; }
-  .theme-toggle-btn:hover { border-color: var(--accent); background: rgba(124,92,252,0.1); transform: rotate(20deg); }
   .auth-header-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.35rem 0.85rem; border-radius: 6px; background: rgba(124,92,252,0.15); border: 1px solid rgba(124,92,252,0.4); color: var(--accent); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
   .auth-header-btn:hover { background: rgba(124,92,252,0.25); }
   .auth-header-btn.signed-in { background: rgba(0,212,170,0.1); border-color: rgba(0,212,170,0.35); color: var(--accent2); }
-  .history-header-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.35rem 0.85rem; border-radius: 6px; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-  .history-header-btn:hover { border-color: var(--accent2); color: var(--accent2); }
-  .reset-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.3rem 0.7rem; border-radius: 6px; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all 0.2s; }
-  .reset-btn:hover { border-color: var(--accent3); color: var(--accent3); }
+  .hamburger-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+  .hamburger-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .hamburger-btn svg { width: 18px; height: 18px; }
+  .dropdown-container { position: relative; display: flex; }
+  .dropdown-menu { position: absolute; top: calc(100% + 10px); right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; width: 180px; display: flex; flex-direction: column; overflow: hidden; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.2s cubic-bezier(0.16,1,0.3,1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 200; }
+  .dropdown-menu.show { opacity: 1; visibility: visible; transform: translateY(0); }
+  body.light-mode .dropdown-menu { background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+  .dropdown-item { background: transparent; border: none; border-bottom: 1px solid var(--border); padding: 0.8rem 1rem; text-align: left; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.6rem; }
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:hover { background: rgba(124,92,252,0.08); color: var(--highlight); }
+  .dropdown-icon { font-size: 0.9rem; width: 16px; text-align: center; display: inline-block; }
 
   /* ── LAYOUT ── */
   .app-container { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; padding-top: 65px; position: relative; z-index: 1; }
@@ -304,28 +307,6 @@
   .login-banner-btn   { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.5rem 1rem; background: var(--accent); border: none; border-radius: 8px; color: white; cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
   .login-banner-btn:hover { background: #9b7afe; }
 
-  /* ── HISTORY PANEL ── */
-  .history-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); z-index: 200; display: flex; justify-content: flex-end; animation: fadeIn 0.2s ease; }
-  .history-panel { width: 420px; max-width: 95vw; background: var(--surface); border-left: 1px solid var(--border); height: 100%; overflow-y: auto; padding: 0; display: flex; flex-direction: column; animation: slideFromRight 0.3s cubic-bezier(0.16,1,0.3,1); }
-  @keyframes slideFromRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-  .history-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--surface); z-index: 1; }
-  .history-title  { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; letter-spacing: 0.1em; color: var(--highlight); }
-  .history-close  { background: transparent; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; }
-  .history-close:hover { background: var(--surface2); color: var(--text); }
-  .history-list   { padding: 1rem; display: flex; flex-direction: column; gap: 0.8rem; flex: 1; }
-  .history-empty  { text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 0.8rem; line-height: 1.8; }
-  .history-card   { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.2s; }
-  .history-card:hover { border-color: var(--accent); background: rgba(124,92,252,0.06); }
-  .history-card-task  { font-size: 0.82rem; color: var(--text); line-height: 1.4; margin-bottom: 0.6rem; font-weight: 500; }
-  .history-card-meta  { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
-  .history-card-date  { font-size: 0.62rem; color: var(--muted); }
-  .history-card-tools { display: flex; gap: 0.3rem; flex-wrap: wrap; }
-  .history-tool-chip  { font-size: 0.58rem; letter-spacing: 0.08em; padding: 0.15rem 0.45rem; background: rgba(124,92,252,0.12); border: 1px solid rgba(124,92,252,0.25); border-radius: 4px; color: #a78bfa; text-transform: uppercase; }
-  .history-search { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 64px; z-index: 1; }
-  .history-search input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; outline: none; transition: border-color 0.2s; }
-  .history-search input:focus { border-color: var(--accent); }
-  .history-search input::placeholder { color: var(--muted); }
-
   /* ── SHARE TOAST ── */
   .share-toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent2); border-radius: 10px; padding: 0.8rem 1.2rem; font-size: 0.78rem; color: var(--accent2); display: flex; align-items: center; gap: 0.6rem; z-index: 600; animation: toastIn 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
   @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
@@ -341,7 +322,6 @@
     .chat-panel    { height: 60vh; position: relative; top: 0; border-right: none; border-bottom: 1px solid var(--border); }
     .results-panel { height: auto; }
     .header-tag    { display: none; }
-    .history-panel { width: 100%; }
   }
 </style>
 </head>
@@ -352,7 +332,7 @@
   <div class="auth-modal-box">
     <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
     <div class="auth-modal-logo">◈ NEXUS</div>
-    <div class="auth-modal-subtitle">Sign in to save your recommendations<br>and access your history anywhere.</div>
+    <div class="auth-modal-subtitle">Sign in to save your recommendations.</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabSignIn" onclick="switchTab('signin')">Sign In</button>
       <button class="auth-tab"        id="tabSignUp" onclick="switchTab('signup')">Sign Up</button>
@@ -370,31 +350,25 @@
   </div>
 </div>
 
-<!-- ── HISTORY PANEL ── -->
-<div class="history-overlay" id="historyOverlay" style="display:none;" onclick="handleHistoryOverlayClick(event)">
-  <div class="history-panel">
-    <div class="history-header">
-      <div class="history-title">◈ Session History</div>
-      <button class="history-close" onclick="closeHistory()">✕</button>
-    </div>
-    <div class="history-search">
-      <input type="text" id="historySearch" placeholder="Search sessions..." oninput="filterHistory(this.value)" />
-    </div>
-    <div class="history-list" id="historyList">
-      <div class="history-loading">Loading your sessions...</div>
-    </div>
-  </div>
-</div>
-
 <!-- ── HEADER ── -->
 <header>
   <div class="logo" onclick="resetApp()"><div class="logo-dot"></div>NEXUS</div>
   <div class="header-tag">AI Tool Intelligence System</div>
   <div class="header-controls">
-    <button class="theme-toggle-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
-    <button class="history-header-btn" id="historyBtn" onclick="openHistory()" style="display:none;">⏱ History</button>
     <button class="auth-header-btn" id="authHeaderBtn" onclick="handleAuthBtnClick()">Sign In</button>
-    <button class="reset-btn" onclick="resetApp()">↺ Reset</button>
+    <div class="dropdown-container">
+      <button class="hamburger-btn" onclick="toggleDropdown(event)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+      <div class="dropdown-menu" id="dropdownMenu">
+        <button class="dropdown-item" onclick="toggleTheme()">
+          <span class="dropdown-icon" id="themeIcon">🌙</span> Toggle Theme
+        </button>
+        <button class="dropdown-item" onclick="resetApp()">
+          <span class="dropdown-icon">↺</span> Reset App
+        </button>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -454,16 +428,13 @@ async function initSupabase() {
 
 function updateAuthUI() {
   const btn     = document.getElementById('authHeaderBtn');
-  const histBtn = document.getElementById('historyBtn');
   if (!btn) return;
   if (currentUser) {
     btn.textContent = `● ${(currentUser.email||'').split('@')[0].slice(0,16)}`;
     btn.classList.add('signed-in');
-    if (histBtn) histBtn.style.display = 'block';
   } else {
     btn.textContent = 'Sign In';
     btn.classList.remove('signed-in');
-    if (histBtn) histBtn.style.display = 'none';
   }
 }
 
@@ -540,150 +511,6 @@ function showSessionLimitBanner() {
   document.getElementById('sessionLimitBanner').style.display = 'block';
 }
 
-// ── HISTORY PANEL ─────────────────────────────────────────────
-function openHistory() {
-  if (!currentUser) { openAuthModal(); return; }
-  document.getElementById('historyOverlay').style.display = 'flex';
-  loadHistory();
-}
-function closeHistory() { document.getElementById('historyOverlay').style.display = 'none'; }
-function handleHistoryOverlayClick(e) { if (e.target === e.currentTarget) closeHistory(); }
-
-// Generates a human-readable title for a session card
-function generateSessionTitle(session) {
-  // Priority 1: use task description (raw first message — most descriptive)
-  if (session.task_description && session.task_description.trim().length > 3) {
-    const t = session.task_description.trim();
-    return t.length > 80 ? t.slice(0, 80) + '…' : t;
-  }
-  // Priority 2: build title from recommended tools + domain
-  const tools  = (session.recommended_tools || []).slice(0, 2);
-  const domain = session.domain ? session.domain.charAt(0).toUpperCase() + session.domain.slice(1) : '';
-  if (tools.length && domain) return `${domain} — ${tools.join(', ')}`;
-  if (tools.length)            return tools.join(' · ');
-  if (domain)                  return `${domain} task`;
-  // Fallback
-  const date = new Date(session.created_at);
-  return `Session — ${date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
-}
-
-let cachedSessions = []; // cached for instant search filtering
-
-async function loadHistory() {
-  const list = document.getElementById('historyList');
-  list.innerHTML = '<div class="history-loading">Loading your sessions...</div>';
-  // Clear search box
-  const searchEl = document.getElementById('historySearch');
-  if (searchEl) searchEl.value = '';
-
-  try {
-    const { data: sessions, error } = await sb
-      .from('sessions')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false })
-      .limit(100);
-    if (error) throw error;
-    cachedSessions = sessions || [];
-    renderHistoryList(cachedSessions);
-  } catch(e) {
-    list.innerHTML = `<div class="history-empty">Could not load history.<br>${e.message}</div>`;
-  }
-}
-
-function filterHistory(query) {
-  if (!query.trim()) { renderHistoryList(cachedSessions); return; }
-  const q = query.toLowerCase();
-  const filtered = cachedSessions.filter(s => {
-    const title = generateSessionTitle(s).toLowerCase();
-    const tools = (s.recommended_tools || []).join(' ').toLowerCase();
-    const domain = (s.domain || '').toLowerCase();
-    return title.includes(q) || tools.includes(q) || domain.includes(q);
-  });
-  renderHistoryList(filtered, query);
-}
-
-function renderHistoryList(sessions, query = '') {
-  const list = document.getElementById('historyList');
-  if (!sessions?.length) {
-    list.innerHTML = query
-      ? `<div class="history-empty">No sessions match "<strong>${escHtml(query)}</strong>"</div>`
-      : '<div class="history-empty">No sessions yet.<br>Start a conversation and your recommendations will appear here.</div>';
-    return;
-  }
-  list.innerHTML = '';
-  sessions.forEach(session => {
-    const card  = document.createElement('div');
-    card.className = 'history-card';
-    const date  = new Date(session.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-    const title = generateSessionTitle(session);
-    const tools = (session.recommended_tools || []).slice(0, 3);
-    card.innerHTML = `
-      <div class="history-card-task">${escHtml(title)}</div>
-      <div class="history-card-meta">
-        <span class="history-card-date">${date}</span>
-        <div class="history-card-tools">
-          ${tools.map(t => `<span class="history-tool-chip">${escHtml(t.split(' ')[0])}</span>`).join('')}
-          ${session.pipeline_mode ? '<span class="history-tool-chip" style="color:var(--accent2);border-color:rgba(0,212,170,0.3);">Pipeline</span>' : ''}
-        </div>
-      </div>`;
-    card.onclick = () => reopenSession(session);
-    list.appendChild(card);
-  });
-}
-
-async function reopenSession(session) {
-  closeHistory();
-  try {
-    const { data: msgs } = await sb
-      .from('messages')
-      .select('*')
-      .eq('session_id', session.id)
-      .order('created_at', { ascending: true });
-    if (!msgs?.length) return;
-
-    // Reset state
-    messages = []; isFirstMessage = false;
-    document.getElementById('messages').innerHTML = '';
-    document.getElementById('resultsPanel').innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">⏱</div>
-        <div class="empty-title">Restoring session...</div>
-      </div>`;
-
-    // Replay chat messages — strip all markers so raw JSON/OPTIONS never show
-    msgs.forEach(m => {
-      const isAI   = m.role === 'assistant';
-      const cleaned = stripMarkers(m.content || '');
-      // Skip empty messages after stripping
-      if (!cleaned.trim()) return;
-      addMessage(isAI ? 'ai' : 'user', cleaned);
-    });
-
-    // Restore recommendations panel from last AI message that had JSON
-    const lastAIWithJSON = [...msgs].reverse().find(m =>
-      m.role === 'assistant' && m.content && m.content.includes('|||JSON_START')
-    );
-    if (lastAIWithJSON) {
-      parseAndRenderTools(lastAIWithJSON.content);
-    } else {
-      // No JSON found — just restore empty state cleanly
-      document.getElementById('resultsPanel').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">◈</div>
-          <div class="empty-title">Session Restored</div>
-          <div class="empty-sub">This session did not complete to recommendations. Continue the conversation below.</div>
-        </div>`;
-    }
-
-    // Restore conversation context so user can continue
-    messages = msgs.map(m => ({ role: m.role, content: m.content }));
-
-  } catch(e) {
-    console.warn('Could not reopen session:', e.message);
-  }
-}
-
 // ── SHARE RECOMMENDATION ──────────────────────────────────────
 let currentShareId = null;
 
@@ -736,7 +563,7 @@ function appendLoginBanner() {
   if (!panel || document.getElementById('loginBanner') || currentUser) return;
   const b = document.createElement('div');
   b.className = 'login-banner'; b.id = 'loginBanner';
-  b.innerHTML = `<div class="login-banner-text"><div class="login-banner-title">💾 Save these recommendations</div><div class="login-banner-sub">Sign in for unlimited searches and full session history.</div></div><button class="login-banner-btn" onclick="openAuthModal()">Sign In →</button>`;
+  b.innerHTML = `<div class="login-banner-text"><div class="login-banner-title">💾 Save these recommendations</div><div class="login-banner-sub">Sign in for unlimited searches.</div></div><button class="login-banner-btn" onclick="openAuthModal()">Sign In →</button>`;
   panel.appendChild(b);
 }
 
@@ -1573,18 +1400,31 @@ function addWelcomeMessage() {
   }, 400);
 }
 
+// ── HEADER DROPDOWN ───────────────────────────────────────────
+function toggleDropdown(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('dropdownMenu');
+  if (menu) menu.classList.toggle('show');
+}
+window.addEventListener('click', (e) => {
+  const menu = document.getElementById('dropdownMenu');
+  if (menu && menu.classList.contains('show') && !menu.contains(e.target)) {
+    menu.classList.remove('show');
+  }
+});
+
 // ── THEME ─────────────────────────────────────────────────────
 function toggleTheme() {
   const isLight = document.body.classList.toggle('light-mode');
-  document.getElementById('themeBtn').textContent = isLight ? '☀️' : '🌙';
+  document.getElementById('themeIcon').textContent = isLight ? '☀️' : '🌙';
   localStorage.setItem('nexus-theme', isLight ? 'light' : 'dark');
 }
 (function() {
   if (localStorage.getItem('nexus-theme') === 'light') {
     document.body.classList.add('light-mode');
     document.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('themeBtn');
-      if (btn) btn.textContent = '☀️';
+      const icon = document.getElementById('themeIcon');
+      if (icon) icon.textContent = '☀️';
     });
   }
 })();
