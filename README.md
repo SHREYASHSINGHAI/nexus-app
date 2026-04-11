@@ -34,7 +34,7 @@ NEXUS extracts budget + skill level from your message (skips asking if already s
         ↓
 Live search of theresanaiforthat.com via Tavily API
         ↓
-Llama 3.3 70B ranks tools by requirement fit — no bias
+Llama 3.1 8B ranks tools by requirement fit — no bias
         ↓
 Recommendations with scores, tradeoffs, prompts, and a step-by-step execution roadmap
 ```
@@ -70,8 +70,8 @@ Recommendations with scores, tradeoffs, prompts, and a step-by-step execution ro
 | Session History | Logged-in users can browse all past sessions and reopen any recommendation |
 | PDF Export | Download a clean formatted PDF of any recommendation |
 | Share Link | Generate a short unique URL to share any recommendation with teammates |
-| Session limit | Anonymous users get 5 free searches per day; sign in for unlimited |
-| Google OAuth + Email login | Via Supabase Auth |
+| Session limit | Free users get 3 full workflows per week; paid tiers up to 1000/week |
+| Mandatory Auth | Google OAuth exclusively via Supabase |
 
 ### Safety
 
@@ -87,7 +87,7 @@ Recommendations with scores, tradeoffs, prompts, and a step-by-step execution ro
 | Layer | Technology |
 |-------|------------|
 | Frontend | Vanilla HTML + CSS + JS — single `index.html`, no build step |
-| AI Model | Llama 3.3 70B via [Groq](https://groq.com) |
+| AI Model | Llama 3.1 8B via [Groq](https://groq.com) |
 | Live Search | [Tavily API](https://tavily.com) → theresanaiforthat.com |
 | Auth | [Supabase Auth](https://supabase.com) — Google OAuth + Email/Password |
 | Hosting | [Vercel](https://vercel.com) — auto-deploys on `git push` |
@@ -101,11 +101,13 @@ Recommendations with scores, tradeoffs, prompts, and a step-by-step execution ro
 nexus-app/
 ├── index.html          ← Entire frontend — HTML, CSS, and JS in one file
 ├── api/
-│   ├── chat.js         ← Groq proxy + Tavily live search on turn 4
-│   ├── config.js       ← Serves Supabase public config from Vercel env vars
-│   └── share.js        ← Creates and retrieves shared recommendation URLs
-├── vercel.json         ← API routing configuration
-└── package.json        ← Minimal — local dev script only
+│   ├── chat.js             ← Groq proxy + Tavily live search + quota enforcement
+│   ├── config.js           ← Serves Supabase public config and Razorpay keys
+│   ├── share.js            ← Creates and retrieves shared recommendation URLs
+│   ├── create-order.js     ← Multi-currency Razorpay order creation
+│   └── verify-payment.js   ← Secure Razorpay payload verification and DB updates
+├── vercel.json             ← API routing configuration
+└── package.json            ← Dependencies including Razorpay SDK
 ```
 
 > **Why `config.js`?** The Supabase anon key must reach the browser to initialise Auth, but hardcoding it in `index.html` exposes it in source. `config.js` reads it from Vercel environment variables at request time — credentials stay in Vercel, out of the codebase entirely.
@@ -123,6 +125,8 @@ Never put these in any code file.
 | `TAVILY_API_KEY` | [app.tavily.com](https://app.tavily.com) → Dashboard |
 | `SUPABASE_URL` | Supabase → Settings → API → Project URL |
 | `SUPABASE_ANON_KEY` | Supabase → Settings → API Keys → Publishable key |
+| `RAZORPAY_KEY_ID` | Razorpay Dashboard → Settings → API Keys |
+| `RAZORPAY_KEY_SECRET` | Razorpay Dashboard → Settings → API Keys |
 
 ---
 
@@ -200,14 +204,14 @@ npx vercel dev
 
 ### `POST /api/chat`
 
-Main conversation endpoint. Proxies to Groq. On turn 4 (when 3+ user messages exist), runs a Tavily search first and injects live results into the system prompt before calling Llama.
+Main conversation endpoint. Proxies to Groq. On the final turn, runs a Tavily search first and injects live results into the system prompt before calling Llama.
 
 <details>
 <summary>Request body</summary>
 
 ```json
 {
-  "model": "llama-3.3-70b-versatile",
+  "model": "llama-3.1-8b-instant",
   "messages": [
     { "role": "system", "content": "..." },
     { "role": "user", "content": "..." }
@@ -304,7 +308,6 @@ Retrieves a shared recommendation. No login required to view a shared link.
 - [ ] Tool comparison table — side-by-side view of recommended tools
 - [ ] Feedback buttons — 👍 / 👎 on each recommendation card
 - [ ] Referral system — share links that earn bonus sessions
-- [ ] Pro plan — remove session limits and priority support
 
 ---
 
@@ -322,6 +325,7 @@ Retrieves a shared recommendation. No login required to view a shared link.
 | [Tavily](https://tavily.com) | AI-optimised web search |
 | [There's An AI For That](https://theresanaiforthat.com) | Most comprehensive AI tool directory |
 | [Supabase](https://supabase.com) | Open source auth and database |
+| [Razorpay](https://razorpay.com) | Multi-currency subscriptions |
 | [Vercel](https://vercel.com) | Zero-config deployment |
 
 ---
