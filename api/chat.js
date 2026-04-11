@@ -143,7 +143,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           model:       model       || 'llama-3.3-70b-versatile',
           messages:    enrichedMessages,
-          max_tokens:  max_tokens  || 8000,
+          max_tokens:  max_tokens  || 3000,
           temperature: temperature || 0.7,
           top_p:       top_p       || 0.9
         })
@@ -239,7 +239,7 @@ async function searchAITools(taskDescription, meta) {
     body: JSON.stringify({
       api_key:             process.env.TAVILY_API_KEY,
       query:               query,
-      search_depth:        'advanced',
+      search_depth:        'basic',
       include_domains:     ['theresanaiforthat.com'],
       max_results:         8,
       include_answer:      false,
