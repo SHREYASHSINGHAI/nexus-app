@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
 <style>
   :root {
     --bg: #0a0a0f; --surface: #111118; --surface2: #1a1a24; --border: #2a2a3a;
@@ -98,6 +99,10 @@
   .other-send-btn { background: var(--accent); border: none; border-radius: 7px; color: white; font-size: 0.9rem; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0; }
   .other-send-btn:hover { background: #9b7afe; }
 
+  /* ── QUESTIONS FORM ── */
+  .questions-form { display: flex; flex-direction: column; gap: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-top: 0.5rem; }
+  .q-block { display: flex; flex-direction: column; gap: 0.6rem; }
+  .q-label { font-size: 0.82rem; font-weight: 700; color: var(--highlight); }
   /* ── INPUT ── */
   .input-area { padding: 1.2rem 2rem; border-top: 1px solid var(--border); background: rgba(10,10,15,0.5); }
   .input-row  { display: flex; gap: 0.8rem; align-items: flex-end; }
@@ -441,6 +446,21 @@
 const { createClient } = supabase;
 let sb = null, currentUser = null, authTab = 'signin';
 
+// ── ANONYMOUS TRACKING ─────────────────────────────────────────
+let visitorId = 'unknown';
+let anonId = localStorage.getItem('nexus_anon_id');
+if (!anonId) {
+  anonId = crypto.randomUUID();
+  localStorage.setItem('nexus_anon_id', anonId);
+}
+
+// Initialize FingerprintJS
+if (window.FingerprintJS) {
+  FingerprintJS.load().then(fp => fp.get()).then(result => {
+    visitorId = result.visitorId;
+  }).catch(e => console.warn('FingerprintJS failed:', e));
+}
+
 async function initSupabase() {
   try {
     const res = await fetch('/api/config');
@@ -452,11 +472,7 @@ async function initSupabase() {
     sb.auth.onAuthStateChange((event, session) => {
       currentUser = session?.user || null;
       updateAuthUI();
-      if (!currentUser) openAuthModal();
-      else closeAuthModal();
     });
-    // Show login modal immediately if not signed in
-    if (!currentUser) openAuthModal();
   } catch(e) { console.warn('Supabase init failed:', e.message); }
 }
 
@@ -488,13 +504,17 @@ async function fetchUserPlan() {
     const { data, error } = await sb.from('subscriptions').select('plan_id').eq('user_id', currentUser.id).single();
     if (error || !data) {
       tierEl.innerHTML = 'You are currently using <b>free tier</b>';
+      currentAIModel = 'llama-3.1-8b-instant';
       return;
     }
     const plans = { 'free': 'free tier', 'basic': 'basic tier', 'pro': 'pro tier', 'max': 'agency tier' };
     const planName = plans[data.plan_id] || 'free tier';
     tierEl.innerHTML = `You are currently using <b>${planName}</b>`;
+    // Paid tiers unlock the 70B model
+    currentAIModel = (data.plan_id === 'free') ? 'llama-3.1-8b-instant' : 'llama-3.3-70b-versatile';
   } catch(e) {
     tierEl.innerHTML = 'You are currently using <b>free tier</b>';
+    currentAIModel = 'llama-3.1-8b-instant';
   }
 }
 
@@ -833,54 +853,31 @@ Precise, analytical, neutral. Always respond in SHORT BULLET POINTS only during 
 - Never write paragraphs during conversation turns
 
 ════════════════════════════════════════
-SMART CONVERSATION FLOW
+SMART CONVERSATION FLOW (2-STEP WIZARD)
 ════════════════════════════════════════
-CRITICAL — Read the user's FIRST message carefully BEFORE asking any questions:
-- Extract budget if already stated (e.g. "free", "no cost", "without paying" → budget = "Free only")
-- Extract skill level if already stated (e.g. "I'm a beginner", "no coding experience" → skill = "Beginner")
-- Extract domain from the task description
-- Only ask questions for information NOT already provided
-- NEVER repeat or confirm what the user just told you — move straight to the next question
+CRITICAL — Read the user's FIRST message carefully.
+Your goal is to gather all missing constraints (Budget, Skill, Use Case Details) AT ONCE so you can make a perfect recommendation on the very next turn.
 
-TURN 1 (user describes task):
-• Acknowledge the task in 1 SHORT bullet — no repeating what they said
-• If task spans MULTIPLE domains: "• This task requires a multi-tool pipeline across [N] subtasks."
-• IF budget already known → skip budget question entirely, go to skill level or Turn 3
-• IF budget NOT mentioned → ask ONLY: "What is your budget?"
-• Output OPTIONS block ONLY if asking a question
+TURN 1 (User describes task):
+• Evaluate what constraints the user already provided.
+• Generate a structured JSON array of up to 7 missing questions you need answered to find the exact perfect tool (e.g. Budget, Technical Skill, and specific use-case constraints like output format or platform).
+• The user will automatically see these questions as a UI form with text options.
+• Output ONLY the JSON block bounded by |||QUESTIONS_START and |||QUESTIONS_END.
+• Do not write any other text.
 
-TURN 2 (after budget answered):
-• Do NOT say "Got it", "Noted", "Thanks", or repeat their budget back to them
-• IF skill level already known → skip, go to Turn 3
-• IF skill level NOT mentioned → ask ONLY: "What is your technical skill level?"
-• Output OPTIONS block only if asking the question
+JSON FORMAT FOR TURN 1:
+|||QUESTIONS_START
+[
+  { "id": "budget", "label": "What is your budget?", "options": ["Free only", "Up to $20/mo", "Any budget"] },
+  { "id": "skill", "label": "What is your technical skill level?", "options": ["Beginner", "Intermediate", "Advanced"] },
+  { "id": "q3", "label": "Do you need offline support?", "options": ["Yes, must be offline", "No, cloud is fine"] }
+]
+|||QUESTIONS_END
 
-TURN 3 (after skill level answered):
-• Do NOT repeat or confirm their skill level
-• Ask ONE specific clarifying question about the USE CASE — NOT about tool preference
-• Good examples: "What is your primary output format?", "Do you need it to work offline?", "Is this for a one-time task or ongoing use?"
-• BAD examples — NEVER ask: "Which tool do you prefer?", "Do you have a tool in mind?" — NEXUS decides the tool
-• Output OPTIONS block with 3-4 relevant choices
-
-TURN 4 (summary + confirmation — ONE TIME ONLY):
-• Show a single clean summary of EVERYTHING you understood. Format it as:
-"• Here is what I understood:
-  — Task: [one line]
-  — Budget: [value]
-  — Skill level: [value]
-  — Use case detail: [one line]"
-• Then ask ONE question: "• Do you have any specific tools or specifications in mind before I generate recommendations?"
-• Output this OPTIONS block:
-|||OPTIONS_START
-["No, generate recommendations", "Yes, I want to add something"]
-|||OPTIONS_END
-
-TURN 5a — If user says NO or "generate recommendations":
-• Immediately output the final JSON recommendation block. Do not write any other text.
-
-TURN 5b — If user says YES or adds something:
-• Acknowledge in 1 bullet: "• Got it — including that in the recommendations."
-• Immediately output the final JSON recommendation block. Do not write any other text.
+TURN 2 (User provides bundled answers):
+• The user will reply with a single message containing all their selected answers (e.g., "Budget: Free only \n Skill: Beginner").
+• Acknowledge in 1 bullet ONLY: "• Got it — analyzing tools based on these constraints."
+• Immediately output the FINAL JSON recommendation block. Do not write any other text.
 
 PROMPT ENGINEERING GUIDELINES (FOR tool_prompts):
 When generating the "prompt" strings inside the JSON block, you MUST act as an expert prompt engineer:
@@ -981,6 +978,7 @@ let messages = [], isThinking = false;
 const SESSION_ID = crypto.randomUUID();
 let isFirstMessage = true, firstTaskDescription = '';
 let lastRecommendationData = null; // for PDF export
+let currentAIModel = 'llama-3.1-8b-instant'; // defaults to free tier model
 
 // ── GROQ API CALL ─────────────────────────────────────────────
 async function callGroq(userMessage) {
@@ -990,12 +988,13 @@ async function callGroq(userMessage) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
+      model: currentAIModel,
       messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
       max_tokens: 1200, temperature: 0.7, top_p: 0.9,
       sessionId: SESSION_ID, taskDescription: firstTaskDescription,
       meta: { isFirstMessage, domain: null, budget: null, skillLevel: null,
-              userId: currentUser?.id || null, userEmail: currentUser?.email || null }
+              userId: currentUser?.id || null, userEmail: currentUser?.email || null,
+              anonId, fingerprint: visitorId }
     })
   });
   if (!response.ok) {
@@ -1372,14 +1371,21 @@ function fallbackCopy(text) {
 }
 
 // ── SEND MESSAGE ──────────────────────────────────────────────
-async function sendMessage() {
+async function sendMessage(overrideText = null) {
   if (isThinking) return;
 
   const input = document.getElementById('userInput');
-  const text  = input.value.trim();
+  const text  = overrideText || input.value.trim();
   if (!text) return;
-  input.value = ''; input.style.height = 'auto';
-  document.querySelectorAll('.option-btn').forEach(b => { b.disabled=true; b.style.opacity='0.4'; });
+  
+  if (!overrideText) {
+    input.value = ''; input.style.height = 'auto';
+  }
+  
+  document.querySelectorAll('.option-btn, .q-opt-btn, .auth-submit-btn').forEach(b => { 
+    if(b.closest('#resetInputArea')) return; // keep reset active
+    b.disabled=true; b.style.opacity='0.5'; 
+  });
 
   addMessage('user', text);
   isThinking = true;
@@ -1391,32 +1397,28 @@ async function sendMessage() {
 
     // Detect if JSON was expected but missing.
     // JSON is expected when user is past the confirmation turn:
-    //   (a) 4+ user messages means we are definitely past confirmation, OR
-    //   (b) 3+ messages AND user just confirmed "no / generate / proceed"
-    const userCount   = messages.filter(m => m.role === 'user').length;
-    const hasJSON     = reply.includes('|||JSON_START');
-    const lastUserMsg = text.toLowerCase().trim();
-    const isConfirmNo = lastUserMsg.includes('no') ||
-                        lastUserMsg.includes('generate') ||
-                        lastUserMsg.includes('proceed') ||
-                        lastUserMsg.includes('yes, i want');
-    const isFinalTurn = userCount >= 4 || (userCount >= 3 && isConfirmNo);
-
-    if (isFinalTurn && !hasJSON) {
-      // Llama gave prose instead of JSON — force it with a direct retry message
+    // With our new 2-step logic, if there are 2 user messages, the AI MUST generate JSON recommendations.
+    const userCount = messages.filter(m => m.role === 'user').length;
+    const hasJSON   = reply.includes('|||JSON_START');
+    
+    if (userCount >= 2 && !hasJSON) {
+      console.warn('AI failed to output JSON block. Retrying...');
       showTyping();
-      addMessage('ai', '• Generating structured recommendations...');
+      addMessage('ai', '• Compiling recommendations...');
       const retryReply = await callGroq(
-        'Output the final recommendations NOW using ONLY the |||JSON_START ... |||JSON_END format. ' +
-        'Do not write any text outside the JSON block. ' +
-        'Use all requirements gathered so far.'
+        "CRITICAL FAILURE: You failed to output ONLY the JSON recommendation block. You MUST format the output within |||JSON_START and |||JSON_END immediately. Do not write conversational prose."
       );
       hideTyping();
       reply = retryReply;
     }
 
+    const qResult = parseQuestions(reply);
     const toolResult = parseAndRenderTools(reply);
-    if (toolResult !== null) {
+
+    if (qResult) {
+      addMessage('ai', '• I need a few specific details to find the exact perfect tools.', qResult);
+      document.getElementById('chatInputArea').style.display = 'none';
+    } else if (toolResult !== null) {
       addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded →');
       document.getElementById('chatInputArea').style.display = 'none';
       document.getElementById('resetInputArea').style.display = 'flex';
@@ -1432,6 +1434,9 @@ async function sendMessage() {
       if (rawMsg.includes('"error":"session_limit"')) {
         errMsg = `• Free session limit reached.\n• Opening upgrade options...`;
         setTimeout(openPricingModal, 1500);
+      } else if (rawMsg.includes('"error":"anon_limit_reached"')) {
+        errMsg = `• Anonymous free search limit reached.\n• Please sign in to continue using Nexus.`;
+        setTimeout(openAuthModal, 1500);
       } else if (rawMsg.includes('"error":"groq_error"')) {
         errMsg = `• AI Provider Limits Reached. The model is temporarily overloaded.`;
       } else if (rawMsg.includes('model_decommissioned')) {

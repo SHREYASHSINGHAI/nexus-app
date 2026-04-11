@@ -87,7 +87,7 @@ Recommendations with scores, tradeoffs, prompts, and a step-by-step execution ro
 | Layer | Technology |
 |-------|------------|
 | Frontend | Vanilla HTML + CSS + JS — single `index.html`, no build step |
-| AI Model | Llama 3.1 8B via [Groq](https://groq.com) |
+| AI Model | Llama 3.1 8B (Free) / Llama 3.3 70B (Pro) via [Groq](https://groq.com) |
 | Live Search | [Tavily API](https://tavily.com) → theresanaiforthat.com |
 | Auth | [Supabase Auth](https://supabase.com) — Google OAuth + Email/Password |
 | Hosting | [Vercel](https://vercel.com) — auto-deploys on `git push` |

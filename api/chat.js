@@ -45,21 +45,54 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'messages array is required' });
   }
 
-  // ── Verify session limits via Supabase subscriptions ────────
+  // ── Verify session limits ────────
   const userId = meta?.userId;
-  if (!userId) {
-    return res.status(401).json({ error: 'unauthorized', message: 'You must be signed in.' });
-  }
 
-  // OPTIMIZATION: Only hit Supabase on the FIRST message.
-  // This saves ~200ms+ of network latency on every follow-up conversational turn.
+  // OPTIMIZATION: Only hit Supabase on the FIRST message (turn 1).
   if (meta?.isFirstMessage) {
-    const subRes = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}&select=*`,
-      { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` } }
-    );
-    const subData = await subRes.json();
-    let sub = subData?.[0];
+    if (!userId) {
+      // ── ANONYMOUS LOGIC ──────────────────────────────────────
+      const ipAddress = req.headers['x-forwarded-for'] || '0.0.0.0';
+      const anonId = meta?.anonId || 'unknown';
+      const fp = meta?.fingerprint || 'unknown';
+
+      const checkUrl = `${process.env.SUPABASE_URL}/rest/v1/anon_usage?or=(anon_id.eq.${anonId},fingerprint.eq.${fp},ip_address.eq.${ipAddress})&select=*`;
+      const resData = await fetch(checkUrl, {
+        headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` }
+      });
+      
+      if (resData.ok) {
+        const records = await resData.json();
+        
+        // If ANY matching record has >= 2 searches, BLOCK them
+        const limitReached = records.some(r => r.search_count >= 2);
+        if (limitReached) {
+          return res.status(429).json({ error: 'anon_limit_reached', message: 'Anonymous limit reached. Please sign in.' });
+        }
+
+        const myRecord = records.find(r => r.anon_id === anonId);
+        if (myRecord) {
+          await fetch(`${process.env.SUPABASE_URL}/rest/v1/anon_usage?anon_id=eq.${anonId}`, {
+            method: 'PATCH',
+            headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ search_count: myRecord.search_count + 1 })
+          });
+        } else {
+          await fetch(`${process.env.SUPABASE_URL}/rest/v1/anon_usage`, {
+            method: 'POST',
+            headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ anon_id: anonId, fingerprint: fp, ip_address: ipAddress, search_count: 1 })
+          });
+        }
+      }
+    } else {
+      // ── REGISTERED LOGIC ─────────────────────────────────────
+      const subRes = await fetch(
+        `${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}&select=*`,
+        { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` } }
+      );
+      const subData = await subRes.json();
+      let sub = subData?.[0];
 
     // If no subscription record, create a default free one
     if (!sub) {
@@ -112,17 +145,18 @@ export default async function handler(req, res) {
       });
     }
 
-    // SUCCESS: Increment the counter so they consume 1 credit for this task
-    await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
-      method: 'PATCH',
-      headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessions_used: sub.sessions_used + 1 })
-    });
+      // SUCCESS: Increment the counter so they consume 1 credit for this task
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessions_used: sub.sessions_used + 1 })
+      });
+    }
   }
 
-  // ── Detect if this is turn 4 (final recommendation turn) ─
+  // ── Detect if this is the final recommendation turn ──────
   const userMessages = messages.filter(m => m.role === 'user');
-  const isFinalTurn  = userMessages.length >= 3;
+  const isFinalTurn  = userMessages.length >= 2;
 
   // ── Step 1: Tavily search on turn 4 ──────────────────────
   let searchContext = '';
