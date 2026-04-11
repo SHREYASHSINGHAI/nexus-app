@@ -962,7 +962,7 @@ async function callGroq(userMessage) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'llama3-8b-8192',
+      model: 'llama-3.1-8b-instant',
       messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
       max_tokens: 3000, temperature: 0.7, top_p: 0.9,
       sessionId: SESSION_ID, taskDescription: firstTaskDescription,
