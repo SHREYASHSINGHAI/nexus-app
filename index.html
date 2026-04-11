@@ -841,7 +841,7 @@ TURN 4 (summary + confirmation — ONE TIME ONLY):
   — Budget: [value]
   — Skill level: [value]
   — Use case detail: [one line]"
-• Then ask ONE question: "• Is there anything else you'd like to add before I generate recommendations?"
+• Then ask ONE question: "• Do you have any specific tools or specifications in mind before I generate recommendations?"
 • Output this OPTIONS block:
 |||OPTIONS_START
 ["No, generate recommendations", "Yes, I want to add something"]
@@ -962,7 +962,7 @@ async function callGroq(userMessage) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama3-8b-8192',
       messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
       max_tokens: 3000, temperature: 0.7, top_p: 0.9,
       sessionId: SESSION_ID, taskDescription: firstTaskDescription,
@@ -1384,12 +1384,9 @@ async function sendMessage() {
 
     const toolResult = parseAndRenderTools(reply);
     if (toolResult !== null) {
-      addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded. You can continue typing to refine these, or click "Start New Task" to begin a different workflow.');
-      // Do NOT hide chatInputArea here so users can follow-up
-      document.getElementById('resetInputArea').style.display = 'flex';
-    } else if (reply.includes('|||NEW_TASK_REJECT|||')) {
-      addMessage('ai', '• Changing to a completely new task requires a new workflow. Please click "Start New Task".');
+      addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded →');
       document.getElementById('chatInputArea').style.display = 'none';
+      document.getElementById('resetInputArea').style.display = 'flex';
     } else {
       addMessage('ai', stripMarkers(reply), parseOptions(reply));
     }

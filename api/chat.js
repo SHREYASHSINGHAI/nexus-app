@@ -147,21 +147,6 @@ export default async function handler(req, res) {
     });
   }
 
-  // ── Step 2.5: Prevent "new tasks" after final turn ────────
-  if (userMessages.length >= 4) {
-    enrichedMessages = enrichedMessages.map(m => {
-      if (m.role === 'system') {
-        return {
-          ...m,
-          content: m.content + `\n\n════════════════════════════════════════\n` +
-            `RESTRICTION: The core recommendation task has already been completed.\n` +
-            `The user is now allowed to ask follow-up questions, request refinements to the recommended tools, or ask for alternative tools for the EXACT SAME TASK.\n` +
-            `HOWEVER, if the user asks you to start an entirely DIFFERENT task (e.g. they originally asked for an accounting app, and now they want a video editing app), you MUST strictly refuse and output EXACTLY this string and nothing else: |||NEW_TASK_REJECT|||`
-        };
-      }
-      return m;
-    });
-  }
 
   // ── Step 3: Call Groq with retry on rate limit ────────────
   let groqData;
@@ -177,7 +162,7 @@ export default async function handler(req, res) {
           'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model:       model       || 'llama-3.3-70b-versatile',
+          model:       model       || 'llama3-8b-8192',
           messages:    enrichedMessages,
           max_tokens:  max_tokens  || 3000,
           temperature: temperature || 0.7,
