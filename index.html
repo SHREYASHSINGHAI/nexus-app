@@ -964,7 +964,7 @@ async function callGroq(userMessage) {
     body: JSON.stringify({
       model: 'llama-3.1-8b-instant',
       messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-      max_tokens: 3000, temperature: 0.7, top_p: 0.9,
+      max_tokens: 1200, temperature: 0.7, top_p: 0.9,
       sessionId: SESSION_ID, taskDescription: firstTaskDescription,
       meta: { isFirstMessage, domain: null, budget: null, skillLevel: null,
               userId: currentUser?.id || null, userEmail: currentUser?.email || null }

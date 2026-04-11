@@ -51,61 +51,72 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'unauthorized', message: 'You must be signed in.' });
   }
 
-  const subRes = await fetch(
-    `${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}&select=*`,
-    { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` } }
-  );
-  const subData = await subRes.json();
-  let sub = subData?.[0];
+  // OPTIMIZATION: Only hit Supabase on the FIRST message.
+  // This saves ~200ms+ of network latency on every follow-up conversational turn.
+  if (meta?.isFirstMessage) {
+    const subRes = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}&select=*`,
+      { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` } }
+    );
+    const subData = await subRes.json();
+    let sub = subData?.[0];
 
-  // If no subscription record, create a default free one
-  if (!sub) {
+    // If no subscription record, create a default free one
+    if (!sub) {
+      const now = new Date();
+      const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      sub = {
+        user_id: userId,
+        plan_id: 'free',
+        status: 'active',
+        sessions_used: 0,
+        quota: 3,
+        week_reset_date: nextWeek.toISOString(),
+        active_until: new Date(now.getTime() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString()
+      };
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions`, {
+        method: 'POST',
+        headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub)
+      });
+    }
+
+    // Check rolling week reset
     const now = new Date();
-    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    sub = {
-      user_id: userId,
-      plan_id: 'free',
-      status: 'active',
-      sessions_used: 0,
-      quota: 3,
-      week_reset_date: nextWeek.toISOString(),
-      active_until: new Date(now.getTime() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString()
-    };
-    await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions`, {
-      method: 'POST',
-      headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(sub)
-    });
-  }
+    if (new Date(sub.week_reset_date) < now) {
+      sub.sessions_used = 0;
+      sub.week_reset_date = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessions_used: 0, week_reset_date: sub.week_reset_date })
+      });
+    }
 
-  // Check rolling week reset
-  const now = new Date();
-  if (new Date(sub.week_reset_date) < now) {
-    sub.sessions_used = 0;
-    sub.week_reset_date = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    // Check monthly expiry
+    if (sub.plan_id !== 'free' && new Date(sub.active_until) < now) {
+      sub.plan_id = 'free';
+      sub.quota = 3;
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_id: 'free', quota: 3 })
+      });
+    }
+
+    // Enforce quota
+    if (sub.sessions_used >= sub.quota) {
+      return res.status(429).json({
+        error: 'session_limit',
+        message: sub.plan_id === 'free' ? 'Free limit reached.' : 'Weekly session limit reached.'
+      });
+    }
+
+    // SUCCESS: Increment the counter so they consume 1 credit for this task
     await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
       method: 'PATCH',
       headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessions_used: 0, week_reset_date: sub.week_reset_date })
-    });
-  }
-
-  // Check monthly expiry
-  if (sub.plan_id !== 'free' && new Date(sub.active_until) < now) {
-    sub.plan_id = 'free';
-    sub.quota = 3;
-    await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
-      method: 'PATCH',
-      headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan_id: 'free', quota: 3 })
-    });
-  }
-
-  // Enforce quota
-  if (meta?.isFirstMessage && sub.sessions_used >= sub.quota) {
-    return res.status(429).json({
-      error: 'session_limit',
-      message: sub.plan_id === 'free' ? 'Free limit reached.' : 'Weekly session limit reached.'
+      body: JSON.stringify({ sessions_used: sub.sessions_used + 1 })
     });
   }
 
@@ -164,7 +175,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           model:       model       || 'llama-3.1-8b-instant',
           messages:    enrichedMessages,
-          max_tokens:  max_tokens  || 3000,
+          max_tokens:  max_tokens  || 1200,
           temperature: temperature || 0.7,
           top_p:       top_p       || 0.9
         })
