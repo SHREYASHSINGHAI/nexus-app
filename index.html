@@ -384,13 +384,18 @@
   <div class="logo" onclick="resetApp()"><div class="logo-dot"></div>NEXUS</div>
   <div class="header-tag">AI Tool Intelligence System</div>
   <div class="header-controls">
-    <button class="auth-header-btn signed-in" style="margin-right:8px; border-color:var(--accent2); color:var(--accent2); display:none;" id="upgradeBtn" onclick="openPricingModal()">Upgrade</button>
     <button class="auth-header-btn" id="authHeaderBtn" onclick="handleAuthBtnClick()">Sign In</button>
     <div class="dropdown-container">
       <button class="hamburger-btn" onclick="toggleDropdown(event)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
       </button>
       <div class="dropdown-menu" id="dropdownMenu">
+        <button class="dropdown-item" id="plansBtn" onclick="openPricingModal()" style="display:none;">
+          <span class="dropdown-icon">⭐</span> Plans
+        </button>
+        <div class="dropdown-item" id="tierDisplay" style="display:none; font-size: 0.65rem; color: var(--muted); cursor: default; padding-top: 0.2rem; padding-bottom: 0.8rem;">
+          Loading plan...
+        </div>
         <button class="dropdown-item" onclick="toggleTheme()">
           <span class="dropdown-icon" id="themeIcon">🌙</span> Toggle Theme
         </button>
@@ -457,16 +462,39 @@ async function initSupabase() {
 
 function updateAuthUI() {
   const btn     = document.getElementById('authHeaderBtn');
-  const upBtn   = document.getElementById('upgradeBtn');
+  const plansBtn = document.getElementById('plansBtn');
+  const tierEl   = document.getElementById('tierDisplay');
   if (!btn) return;
   if (currentUser) {
     btn.textContent = `● ${(currentUser.email||'').split('@')[0].slice(0,16)}`;
     btn.classList.add('signed-in');
-    if (upBtn) upBtn.style.display = 'inline-flex';
+    if (plansBtn) plansBtn.style.display = 'flex';
+    if (tierEl) {
+      tierEl.style.display = 'flex';
+      fetchUserPlan();
+    }
   } else {
     btn.textContent = 'Sign In';
     btn.classList.remove('signed-in');
-    if (upBtn) upBtn.style.display = 'none';
+    if (plansBtn) plansBtn.style.display = 'none';
+    if (tierEl) tierEl.style.display = 'none';
+  }
+}
+
+async function fetchUserPlan() {
+  const tierEl = document.getElementById('tierDisplay');
+  if (!sb || !currentUser) return;
+  try {
+    const { data, error } = await sb.from('subscriptions').select('plan_id').eq('user_id', currentUser.id).single();
+    if (error || !data) {
+      tierEl.innerHTML = 'You are currently using <b>free tier</b>';
+      return;
+    }
+    const plans = { 'free': 'free tier', 'basic': 'basic tier', 'pro': 'pro tier', 'max': 'agency tier' };
+    const planName = plans[data.plan_id] || 'free tier';
+    tierEl.innerHTML = `You are currently using <b>${planName}</b>`;
+  } catch(e) {
+    tierEl.innerHTML = 'You are currently using <b>free tier</b>';
   }
 }
 
@@ -1399,17 +1427,20 @@ async function sendMessage() {
     hideTyping();
     let errMsg = `• Connection error: ${e.message}`;
     try {
-      const parsed = JSON.parse(e.message);
-      if (parsed.error === 'rate_limit') {
-        errMsg = '• NEXUS is experiencing high traffic right now.\n• Please wait 30 seconds and try again.';
-      } else if (parsed.error === 'network_error') {
-        errMsg = '• Could not reach the AI service.\n• Please check your connection and try again.';
-      } else if (parsed.error === 'session_limit') {
-        errMsg = `• ${parsed.message}\n• Please Upgrade your plan.`;
-      } else if (parsed.error === 'groq_error') {
-        errMsg = `• AI Error: ${JSON.stringify(parsed.details)}`;
-      } else if (parsed.message) {
-        errMsg = `• Backend Error: ${parsed.message}`;
+      // Sometimes e.message is double-stringified or wrapped in a server_error
+      let rawMsg = e.message;
+      if (rawMsg.includes('"error":"session_limit"')) {
+        errMsg = `• Free session limit reached.\n• Opening upgrade options...`;
+        setTimeout(openPricingModal, 1500);
+      } else if (rawMsg.includes('"error":"groq_error"')) {
+        errMsg = `• AI Provider Limits Reached. The model is temporarily overloaded.`;
+      } else if (rawMsg.includes('model_decommissioned')) {
+        errMsg = `• The AI model requires an update. Please contact the administrator.`;
+      } else {
+        const parsed = JSON.parse(rawMsg);
+        if (parsed.message) {
+          errMsg = `• Error: ${parsed.message}`;
+        }
       }
     } catch(_) { /* keep the default e.message */ }
     addMessage('ai', errMsg);
