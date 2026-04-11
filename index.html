@@ -6,6 +6,7 @@
 <title>NEXUS — AI Tool Intelligence</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
   :root {
     --bg: #0a0a0f; --surface: #111118; --surface2: #1a1a24; --border: #2a2a3a;
@@ -84,13 +85,6 @@
   .example-prompt-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; padding: 0.6rem 0.9rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); cursor: pointer; transition: all 0.2s; text-align: left; line-height: 1.4; }
   .example-prompt-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(124,92,252,0.08); }
   .example-prompt-label { font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent2); margin-bottom: 0.4rem; display: block; }
-
-  /* ── SESSION LIMIT BANNER ── */
-  .session-limit-banner { margin: 1rem 2rem; padding: 0.9rem 1.2rem; background: rgba(255,107,107,0.06); border: 1px solid rgba(255,107,107,0.25); border-radius: 10px; display: flex; align-items: center; gap: 0.8rem; }
-  .slb-text { flex: 1; font-size: 0.75rem; color: var(--text); line-height: 1.5; }
-  .slb-text strong { color: var(--accent3); }
-  .slb-btn { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.4rem 0.8rem; background: var(--accent); border: none; border-radius: 6px; color: white; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.2s; }
-  .slb-btn:hover { background: #9b7afe; }
 
   /* ── OPTIONS ── */
   .options-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
@@ -340,11 +334,57 @@
   </div>
 </div>
 
+<!-- ── PRICING MODAL ── -->
+<div class="auth-modal-overlay" id="pricingModal" style="display:none;">
+  <div class="auth-modal-box" style="max-width: 500px;">
+    <button class="auth-modal-close" onclick="closePricingModal()">✕</button>
+    <div class="auth-modal-logo">◈ UPGRADE NEXUS</div>
+    <div class="auth-modal-subtitle">Choose a plan to get more weekly workflows.</div>
+    
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <!-- Basic -->
+      <div style="border:1px solid var(--border); border-radius:10px; padding:15px; cursor:pointer;" onclick="startCheckout('basic')">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:bold; color:var(--highlight); margin-bottom:5px;">Basic Plan</div>
+            <div style="font-size:0.75rem; color:var(--muted)">35 Sessions / week</div>
+          </div>
+          <div style="font-weight:bold; color:var(--accent2);" class="price-basic">$0.99/mo</div>
+        </div>
+      </div>
+      
+      <!-- Pro -->
+      <div style="border:1px solid var(--accent); border-radius:10px; padding:15px; cursor:pointer; background:rgba(124,92,252,0.05);" onclick="startCheckout('pro')">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:bold; color:var(--highlight); margin-bottom:5px;">Pro Plan</div>
+            <div style="font-size:0.75rem; color:var(--muted)">70 Sessions / week</div>
+          </div>
+          <div style="font-weight:bold; color:var(--accent2);" class="price-pro">$1.99/mo</div>
+        </div>
+      </div>
+      
+      <!-- Max -->
+      <div style="border:1px solid var(--border); border-radius:10px; padding:15px; cursor:pointer;" onclick="startCheckout('max')">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:bold; color:var(--highlight); margin-bottom:5px;">Agency Max</div>
+            <div style="font-size:0.75rem; color:var(--muted)">1000 Sessions / week</div>
+          </div>
+          <div style="font-weight:bold; color:var(--accent2);" class="price-max">$5.00/mo</div>
+        </div>
+      </div>
+    </div>
+    <div class="auth-error" id="pricingError"></div>
+  </div>
+</div>
+
 <!-- ── HEADER ── -->
 <header>
   <div class="logo" onclick="resetApp()"><div class="logo-dot"></div>NEXUS</div>
   <div class="header-tag">AI Tool Intelligence System</div>
   <div class="header-controls">
+    <button class="auth-header-btn signed-in" style="margin-right:8px; border-color:var(--accent2); color:var(--accent2); display:none;" id="upgradeBtn" onclick="openPricingModal()">Upgrade</button>
     <button class="auth-header-btn" id="authHeaderBtn" onclick="handleAuthBtnClick()">Sign In</button>
     <div class="dropdown-container">
       <button class="hamburger-btn" onclick="toggleDropdown(event)">
@@ -369,19 +409,16 @@
       <div><div class="chat-title">INTELLIGENCE INTERFACE</div></div>
       <div class="status-badge">● ONLINE</div>
     </div>
-    <div id="sessionLimitBanner" style="display:none;">
-      <div class="session-limit-banner">
-        <div class="slb-text"><strong>Daily limit reached.</strong> You've used 5 free searches today. Sign in for unlimited access.</div>
-        <button class="slb-btn" onclick="openAuthModal()">Sign In</button>
-      </div>
-    </div>
     <div class="messages" id="messages"></div>
     <div class="input-area">
-      <div class="input-row">
+      <div class="input-row" id="chatInputArea">
         <textarea class="chat-input" id="userInput" placeholder="Describe your task..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
         <button class="send-btn" onclick="sendMessage()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
         </button>
+      </div>
+      <div class="input-row" id="resetInputArea" style="display:none; justify-content:center;">
+        <button class="auth-submit-btn" style="width:auto; padding:0.8rem 2rem;" onclick="resetApp()">◈ Start New Task (Uses 1 Session)</button>
       </div>
     </div>
   </div>
@@ -420,13 +457,86 @@ async function initSupabase() {
 
 function updateAuthUI() {
   const btn     = document.getElementById('authHeaderBtn');
+  const upBtn   = document.getElementById('upgradeBtn');
   if (!btn) return;
   if (currentUser) {
     btn.textContent = `● ${(currentUser.email||'').split('@')[0].slice(0,16)}`;
     btn.classList.add('signed-in');
+    if (upBtn) upBtn.style.display = 'inline-flex';
   } else {
     btn.textContent = 'Sign In';
     btn.classList.remove('signed-in');
+    if (upBtn) upBtn.style.display = 'none';
+  }
+}
+
+function openPricingModal() {
+  // Try to detect geolocation client-side using timezone or let server handle
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const isIndia = tz === 'Asia/Calcutta' || tz === 'Asia/Kolkata';
+  
+  if (isIndia) {
+    document.querySelector('.price-basic').textContent = '₹49/mo';
+    document.querySelector('.price-pro').textContent = '₹99/mo';
+    document.querySelector('.price-max').textContent = '₹399/mo';
+  } else {
+    document.querySelector('.price-basic').textContent = '$0.99/mo';
+    document.querySelector('.price-pro').textContent = '$1.99/mo';
+    document.querySelector('.price-max').textContent = '$5.00/mo';
+  }
+  
+  document.getElementById('pricingModal').style.display = 'flex';
+  document.getElementById('pricingError').textContent = '';
+}
+function closePricingModal() { document.getElementById('pricingModal').style.display = 'none'; }
+
+async function startCheckout(plan_id) {
+  const errorEl = document.getElementById('pricingError');
+  errorEl.textContent = 'Initiating payment...';
+  try {
+    const res = await fetch('/api/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_id })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    const options = {
+      key: process.env.RAZORPAY_KEY_ID || '', // Razorpay will use api key from response optionally, we handle this
+      amount: data.amount,
+      currency: data.currency,
+      name: 'NEXUS Premium',
+      description: `Subscription - ${plan_id.toUpperCase()} Plan`,
+      order_id: data.id,
+      handler: async function (response) {
+        errorEl.textContent = 'Verifying payment...';
+        const vRes = await fetch('/api/verify-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...response, plan_id, user_id: currentUser.id })
+        });
+        if (vRes.ok) {
+          closePricingModal();
+          alert('Subscription activated successfully! Enjoy unlimited workflows.');
+        } else {
+          errorEl.textContent = 'Verification failed. Contact support.';
+        }
+      },
+      prefill: { email: currentUser.email },
+      theme: { color: '#7c5cfc' }
+    };
+    
+    // We fetch Razorpay key from config
+    const configRes = await fetch('/api/config');
+    const cfg = await configRes.json();
+    options.key = cfg.razorpayKey; // ensure you pass razorpay key in /api/config
+    
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+    errorEl.textContent = '';
+  } catch(e) {
+    errorEl.textContent = e.message;
   }
 }
 
@@ -449,24 +559,6 @@ async function signInWithGoogle() {
 }
 
 // Email auth removed for Google-only mandatory login
-
-// ── SESSION LIMIT (5 per day for anonymous users) ─────────────
-const SESSION_LIMIT = 5;
-function getSessionCount() {
-  const key  = 'nexus_sessions_' + new Date().toDateString();
-  return parseInt(localStorage.getItem(key) || '0');
-}
-function incrementSessionCount() {
-  const key = 'nexus_sessions_' + new Date().toDateString();
-  localStorage.setItem(key, getSessionCount() + 1);
-}
-function isSessionLimitReached() {
-  if (currentUser) return false; // logged-in users: unlimited
-  return getSessionCount() >= SESSION_LIMIT;
-}
-function showSessionLimitBanner() {
-  document.getElementById('sessionLimitBanner').style.display = 'block';
-}
 
 // ── SHARE RECOMMENDATION ──────────────────────────────────────
 let currentShareId = null;
@@ -880,12 +972,6 @@ async function callGroq(userMessage) {
   });
   if (!response.ok) {
     const err = await response.json();
-    if (response.status === 429 && err.error === 'session_limit') {
-      hideTyping();
-      showSessionLimitBanner();
-      isThinking = false;
-      throw new Error(JSON.stringify({ error: 'session_limit' }));
-    }
     throw new Error(JSON.stringify(err));
   }
   isFirstMessage = false;
@@ -1256,20 +1342,11 @@ function fallbackCopy(text) {
 async function sendMessage() {
   if (isThinking) return;
 
-  // Check session limit for anonymous users
-  if (isFirstMessage && isSessionLimitReached()) {
-    showSessionLimitBanner();
-    return;
-  }
-
   const input = document.getElementById('userInput');
   const text  = input.value.trim();
   if (!text) return;
   input.value = ''; input.style.height = 'auto';
   document.querySelectorAll('.option-btn').forEach(b => { b.disabled=true; b.style.opacity='0.4'; });
-
-  // Count the session on first message
-  if (isFirstMessage) incrementSessionCount();
 
   addMessage('user', text);
   isThinking = true;
@@ -1307,7 +1384,12 @@ async function sendMessage() {
 
     const toolResult = parseAndRenderTools(reply);
     if (toolResult !== null) {
-      addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded →');
+      addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded. You can continue typing to refine these, or click "Start New Task" to begin a different workflow.');
+      // Do NOT hide chatInputArea here so users can follow-up
+      document.getElementById('resetInputArea').style.display = 'flex';
+    } else if (reply.includes('|||NEW_TASK_REJECT|||')) {
+      addMessage('ai', '• Changing to a completely new task requires a new workflow. Please click "Start New Task".');
+      document.getElementById('chatInputArea').style.display = 'none';
     } else {
       addMessage('ai', stripMarkers(reply), parseOptions(reply));
     }
@@ -1320,11 +1402,6 @@ async function sendMessage() {
         errMsg = '• NEXUS is experiencing high traffic right now.\n• Please wait 30 seconds and try again.';
       } else if (parsed.error === 'network_error') {
         errMsg = '• Could not reach the AI service.\n• Please check your connection and try again.';
-      } else if (parsed.error === 'session_limit') {
-        hideTyping();
-        showSessionLimitBanner();
-        isThinking = false;
-        return;
       }
     } catch(_) { /* use default message */ }
     addMessage('ai', errMsg);
@@ -1340,8 +1417,9 @@ function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.sc
 function resetApp() {
   messages=[]; isFirstMessage=true; firstTaskDescription=''; lastRecommendationData=null;
   document.getElementById('messages').innerHTML='';
-  document.getElementById('sessionLimitBanner').style.display='none';
   document.getElementById('resultsPanel').innerHTML=`<div class="empty-state"><div class="empty-icon">◈</div><div class="empty-title">Awaiting Analysis</div><div class="empty-sub">Describe your task in the chat and NEXUS will identify the best AI tools for your specific needs.</div></div>`;
+  document.getElementById('chatInputArea').style.display='flex';
+  document.getElementById('resetInputArea').style.display='none';
   setTimeout(addWelcomeMessage, 100);
 }
 

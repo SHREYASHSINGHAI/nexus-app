@@ -45,47 +45,67 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'messages array is required' });
   }
 
-  // ── Anonymous session rate limiting ──────────────────────────
-  if (!meta?.userId) {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() 
-               || req.socket?.remoteAddress 
-               || 'unknown';
-    
-    // Hash the IP so you never store raw IPs (privacy-friendly)
-    const ipHash = require('crypto')
-      .createHash('sha256')
-      .update(ip + (process.env.RATE_LIMIT_SALT || 'salt123'))
-      .digest('hex')
-      .slice(0, 16);
+  // ── Verify session limits via Supabase subscriptions ────────
+  const userId = meta?.userId;
+  if (!userId) {
+    return res.status(401).json({ error: 'unauthorized', message: 'You must be signed in.' });
+  }
 
-    const today = new Date().toISOString().slice(0, 10);
-    const limitKey = `anon_limit_${ipHash}_${today}`;
+  const subRes = await fetch(
+    `${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}&select=*`,
+    { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` } }
+  );
+  const subData = await subRes.json();
+  let sub = subData?.[0];
 
-    // Read current count from Supabase
-    const countRes = await fetch(
-      `${process.env.SUPABASE_URL}/rest/v1/rate_limits?key=eq.${limitKey}&select=count`,
-      { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` } }
-    );
-    const countData = await countRes.json();
-    const currentCount = countData?.[0]?.count || 0;
-
-    if (currentCount >= 5) {
-      return res.status(429).json({ 
-        error: 'session_limit',
-        message: 'Daily limit reached. Sign in for unlimited access.' 
-      });
-    }
-
-    // Upsert the counter
-    await fetch(`${process.env.SUPABASE_URL}/rest/v1/rate_limits`, {
+  // If no subscription record, create a default free one
+  if (!sub) {
+    const now = new Date();
+    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    sub = {
+      user_id: userId,
+      plan_id: 'free',
+      status: 'active',
+      sessions_used: 0,
+      quota: 3,
+      week_reset_date: nextWeek.toISOString(),
+      active_until: new Date(now.getTime() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString()
+    };
+    await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions`, {
       method: 'POST',
-      headers: {
-        apikey: process.env.SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify({ key: limitKey, count: currentCount + 1, updated_at: new Date().toISOString() })
+      headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub)
+    });
+  }
+
+  // Check rolling week reset
+  const now = new Date();
+  if (new Date(sub.week_reset_date) < now) {
+    sub.sessions_used = 0;
+    sub.week_reset_date = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
+      method: 'PATCH',
+      headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessions_used: 0, week_reset_date: sub.week_reset_date })
+    });
+  }
+
+  // Check monthly expiry
+  if (sub.plan_id !== 'free' && new Date(sub.active_until) < now) {
+    sub.plan_id = 'free';
+    sub.quota = 3;
+    await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
+      method: 'PATCH',
+      headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_id: 'free', quota: 3 })
+    });
+  }
+
+  // Enforce quota
+  if (meta?.isFirstMessage && sub.sessions_used >= sub.quota) {
+    return res.status(429).json({
+      error: 'session_limit',
+      message: sub.plan_id === 'free' ? 'Free limit reached.' : 'Weekly session limit reached.'
     });
   }
 
@@ -121,6 +141,22 @@ export default async function handler(req, res) {
             searchContext +
             `\n════════════════════════════════════════\n` +
             `INSTRUCTION: Prioritise recommending tools from the live data above when they match the user's requirements better than your training data.`
+        };
+      }
+      return m;
+    });
+  }
+
+  // ── Step 2.5: Prevent "new tasks" after final turn ────────
+  if (userMessages.length >= 4) {
+    enrichedMessages = enrichedMessages.map(m => {
+      if (m.role === 'system') {
+        return {
+          ...m,
+          content: m.content + `\n\n════════════════════════════════════════\n` +
+            `RESTRICTION: The core recommendation task has already been completed.\n` +
+            `The user is now allowed to ask follow-up questions, request refinements to the recommended tools, or ask for alternative tools for the EXACT SAME TASK.\n` +
+            `HOWEVER, if the user asks you to start an entirely DIFFERENT task (e.g. they originally asked for an accounting app, and now they want a video editing app), you MUST strictly refuse and output EXACTLY this string and nothing else: |||NEW_TASK_REJECT|||`
         };
       }
       return m;
@@ -207,6 +243,15 @@ export default async function handler(req, res) {
 
   // ── Step 4: Respond to client immediately ─────────────────
   res.status(200).json(groqData);
+
+  // Increment usage count
+  if (meta?.isFirstMessage && !isFinalTurn && sub) {
+    fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
+      method: 'PATCH',
+      headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessions_used: sub.sessions_used + 1 })
+    }).catch(e => console.error('Failed to increment session usage:', e));
+  }
 
   // ── Step 5: Save analytics to Supabase (fire and forget) ──
   const replyText = groqData?.choices?.[0]?.message?.content || '';

@@ -2,6 +2,12 @@
   "name": "nexus-app",
   "version": "1.0.0",
   "description": "NEXUS — AI Tool Intelligence System",
+  "main": "api/chat.js",
+  "private": true,
+  "license": "MIT",
+  "dependencies": {
+    "razorpay": "^2.9.4"
+  },
   "scripts": {
     "dev": "npx vercel dev"
   }
