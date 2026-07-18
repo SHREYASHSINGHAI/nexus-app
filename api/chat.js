@@ -44,10 +44,10 @@ export default async function handler(req, res) {
   if (isFinalTurn && process.env.TAVILY_API_KEY) {
     try {
       searchContext = await searchAITools(taskDescription, meta);
-      console.log('Tavily search completed — context length:', searchContext.length);
+      console.log('[TAVILY SERVICE] Search completed — context length:', searchContext.length);
     } catch (err) {
       // Tavily failure is non-fatal — proceed without live data
-      console.warn('Tavily search failed — proceeding without:', err.message);
+      console.warn('[TAVILY SERVICE] Search failed:', err.message);
     }
   }
 
@@ -86,16 +86,37 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     const errMsg = err?.message || String(err);
-    console.error('Groq SDK call failed:', errMsg);
-    if (err?.status === 429) {
-      return res.status(429).json({
-        error: 'rate_limit',
-        message: 'NEXUS is experiencing high traffic right now. Please wait a moment and try again.'
+    console.error('[GROQ SERVICE] Call failed:', errMsg);
+
+    // Auth failure — invalid or missing GROQ_API_KEY
+    if (err?.status === 401 || errMsg.includes('Invalid API Key')) {
+      return res.status(401).json({
+        error: 'groq_auth',
+        service: 'Groq AI (LLM Provider)',
+        message: 'GROQ_API_KEY is missing or invalid. Update it in Vercel → Settings → Environment Variables.'
       });
     }
+    // Rate limit — too many requests to Groq
+    if (err?.status === 429) {
+      return res.status(429).json({
+        error: 'groq_rate_limit',
+        service: 'Groq AI (LLM Provider)',
+        message: 'Groq API rate limit exceeded. Please wait 30 seconds and try again.'
+      });
+    }
+    // Model not found
+    if (err?.status === 404 || errMsg.includes('model_not_found')) {
+      return res.status(404).json({
+        error: 'groq_model',
+        service: 'Groq AI (LLM Provider)',
+        message: `Model "${model || 'llama-3.3-70b-versatile'}" is not available on Groq. Check supported models at console.groq.com.`
+      });
+    }
+    // Generic Groq/network failure
     return res.status(err?.status || 500).json({
-      error: 'network_error',
-      message: errMsg || 'Could not reach the AI service. Please check your connection and try again.'
+      error: 'groq_network',
+      service: 'Groq AI (LLM Provider)',
+      message: errMsg || 'Could not reach the Groq AI service. Check your connection or Groq status page.'
     });
   }
 
@@ -108,7 +129,7 @@ export default async function handler(req, res) {
   try {
     await saveAnalytics({ sessionId, taskDescription, meta, messages, replyText });
   } catch (err) {
-    console.error('Supabase save failed:', err.message);
+    console.error('[SUPABASE SERVICE] Analytics save failed:', err.message);
   }
 
   // ── Step 5: Respond to client ─────────────────────────────

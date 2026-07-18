@@ -406,14 +406,30 @@ async function sendMessage() {
     let errMsg = '• Connection error. Please try again.';
     try {
       const parsed = JSON.parse(e.message);
-      if (parsed.error === 'rate_limit') {
-        errMsg = '• NEXUS is experiencing high traffic right now.\n• Please wait 30 seconds and try again.';
-      } else if (parsed.error === 'network_error') {
-        errMsg = '• Could not reach the AI service.\n• Please check your connection and try again.';
+      const svc    = parsed.service ? `⚠ ${parsed.service}` : '⚠ Unknown Service';
+
+      switch (parsed.error) {
+        case 'groq_auth':
+          errMsg = `• ${svc}\n• API key is missing or invalid.\n• Fix: Update GROQ_API_KEY in Vercel → Settings → Environment Variables.`;
+          break;
+        case 'groq_rate_limit':
+          errMsg = `• ${svc}\n• Rate limit exceeded.\n• Please wait 30 seconds and try again.`;
+          break;
+        case 'groq_model':
+          errMsg = `• ${svc}\n• ${parsed.message}`;
+          break;
+        case 'groq_network':
+          errMsg = `• ${svc}\n• Could not reach the AI service.\n• Check your internet or Groq status at status.groq.com.`;
+          break;
+        case 'tavily_error':
+          errMsg = `• ⚠ Tavily Search API\n• Live tool search failed.\n• Fix: Verify TAVILY_API_KEY in Vercel environment.`;
+          break;
+        default:
+          errMsg = `• ${svc}\n• ${parsed.message || 'An unexpected error occurred.'}`;
       }
     } catch(_) { }
     addMessage('ai', errMsg);
-    console.error('Groq error:', e);
+    console.error('API error:', e);
   }
   isThinking = false;
 }
