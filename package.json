@@ -2,7 +2,12 @@
   "name": "nexus-app",
   "version": "1.0.0",
   "description": "NEXUS — AI Tool Intelligence System",
+  "type": "module",
   "scripts": {
-    "dev": "npx vercel dev"
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "groq-sdk": "^0.9.0"
   }
 }
