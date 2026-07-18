@@ -69,6 +69,44 @@ async function testChat() {
     console.error('✗ Test 4 Failed:', err.message);
     process.exit(1);
   }
+
+  // Test 5: Live AI Response — verifies the AI actually returns content
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey || groqKey.length < 10) {
+    console.log('⊘ Test 5 Skipped: GROQ_API_KEY not set — cannot verify live AI response.');
+  } else {
+    try {
+      const req = {
+        method: 'POST',
+        body: {
+          messages: [
+            { role: 'system', content: 'You are a helpful assistant. Reply in one short sentence.' },
+            { role: 'user', content: 'Say hello and confirm you are working.' }
+          ],
+          model: 'llama-3.3-70b-versatile',
+          max_tokens: 100,
+          temperature: 0.5
+        }
+      };
+      const res = createMockRes();
+      await handler(req, res);
+
+      if (res.statusCode !== 200) {
+        throw new Error(`Expected 200, got ${res.statusCode}. Body: ${JSON.stringify(res.body)}`);
+      }
+
+      const aiContent = res.body?.choices?.[0]?.message?.content;
+      if (!aiContent || typeof aiContent !== 'string' || aiContent.trim().length === 0) {
+        throw new Error('AI returned an empty or missing response content.');
+      }
+
+      console.log(`✓ Test 5 Passed: AI responded with: "${aiContent.trim().substring(0, 80)}..."`);
+    } catch (err) {
+      // Error: Live Groq API call failed to return a valid AI-generated text response.
+      console.error('✗ Test 5 Failed:', err.message);
+      process.exit(1);
+    }
+  }
 }
 
 testChat();
