@@ -15,6 +15,7 @@
     { "src": "/api/chat",   "dest": "/api/chat.js"   },
     { "src": "/api/config", "dest": "/api/config.js" },
     { "src": "/api/share",  "dest": "/api/share.js"  },
+    { "handle": "filesystem" },
     { "src": "/(.*)",       "dest": "/index.html"    }
   ]
 }

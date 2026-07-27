@@ -46,7 +46,22 @@ async function testAIResponseParsing() {
     const mockReply = "Based on your task, pick:\n|||OPTIONS_START\n[\"Option 1\", \"Option 2\"]\n|||OPTIONS_END";
     const options = sandbox.parseOptions(mockReply);
     if (!options || options[0] !== 'Option 1') throw new Error('Failed to parse OPTIONS block.');
-    console.log('✓ Test 1 Passed: Options correctly extracted.');
+
+    // Test 1b: Single quotes instead of double quotes
+    const mockReplySingle = "Based on your task, pick:\n|||OPTIONS_START\n['Option A', 'Option B']\n|||OPTIONS_END";
+    const optionsSingle = sandbox.parseOptions(mockReplySingle);
+    if (!optionsSingle || optionsSingle[0] !== 'Option A' || optionsSingle[1] !== 'Option B') {
+      throw new Error('Failed to parse single-quoted OPTIONS block fallback.');
+    }
+
+    // Test 1c: Non-JSON raw list with mixed quotes
+    const mockReplyMixed = "Based on your task, pick:\n|||OPTIONS_START\n- \"Option C\"\n- 'Option D'\n|||OPTIONS_END";
+    const optionsMixed = sandbox.parseOptions(mockReplyMixed);
+    if (!optionsMixed || optionsMixed[0] !== 'Option C' || optionsMixed[1] !== 'Option D') {
+      throw new Error('Failed to parse mixed/malformed OPTIONS block fallback.');
+    }
+
+    console.log('✓ Test 1 Passed: Options correctly extracted (including double, single, and fallback formats).');
   } catch (err) {
     // Error: Options parser failed to extract option array from OPTIONS markers.
     console.error('✗ Test 1 Failed:', err.message);

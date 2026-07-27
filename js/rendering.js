@@ -7,7 +7,16 @@
 function parseOptions(reply) {
   const m = reply.match(/\|\|\|OPTIONS_START\s*([\s\S]*?)\s*\|\|\|OPTIONS_END/);
   if (!m) return null;
-  try { return JSON.parse(m[1].trim()); } catch(e) { return null; }
+  const raw = m[1].trim();
+  try {
+    return JSON.parse(raw);
+  } catch(e) {
+    const matches = [...raw.matchAll(/(?:"([^"]*)"|'([^']*)')/g)];
+    if (matches.length > 0) {
+      return matches.map(match => match[1] || match[2]);
+    }
+    return null;
+  }
 }
 
 function stripMarkers(reply) {
