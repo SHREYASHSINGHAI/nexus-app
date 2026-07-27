@@ -13,8 +13,15 @@ export default async function handler(req, res) {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
 
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    return res.status(500).json({ error: 'Supabase not configured' });
+  const missingVars = [];
+  if (!SUPABASE_URL || !SUPABASE_URL.startsWith('http')) missingVars.push('SUPABASE_URL');
+  if (!SUPABASE_KEY) missingVars.push('SUPABASE_ANON_KEY');
+
+  if (missingVars.length > 0) {
+    return res.status(500).json({
+      error: 'server_config_error',
+      message: `Missing or malformed environment variables: ${missingVars.join(', ')}`
+    });
   }
 
   const headers = {
@@ -61,7 +68,7 @@ export default async function handler(req, res) {
     try {
       // Generate a short unique share ID (8 chars)
       const shareId = Math.random().toString(36).slice(2, 6) +
-                      Math.random().toString(36).slice(2, 6);
+        Math.random().toString(36).slice(2, 6);
 
       // Patch the session with the share_id
       const patchRes = await fetch(

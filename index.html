@@ -853,31 +853,53 @@ Precise, analytical, neutral. Always respond in SHORT BULLET POINTS only during 
 - Never write paragraphs during conversation turns
 
 ════════════════════════════════════════
-SMART CONVERSATION FLOW (2-STEP WIZARD)
+SMART CONVERSATION FLOW
 ════════════════════════════════════════
-CRITICAL — Read the user's FIRST message carefully.
-Your goal is to gather all missing constraints (Budget, Skill, Use Case Details) AT ONCE so you can make a perfect recommendation on the very next turn.
+CRITICAL — Read the user's FIRST message carefully BEFORE asking any questions:
+- Extract budget if already stated (e.g. "free", "no cost", "without paying" → budget = "Free only")
+- Extract skill level if already stated (e.g. "I'm a beginner", "no coding experience" → skill = "Beginner")
+- Extract domain from the task description
+- Only ask questions for information NOT already provided
+- NEVER repeat or confirm what the user just told you — move straight to the next question
 
-TURN 1 (User describes task):
-• Evaluate what constraints the user already provided.
-• Generate a structured JSON array of up to 7 missing questions you need answered to find the exact perfect tool (e.g. Budget, Technical Skill, and specific use-case constraints like output format or platform).
-• The user will automatically see these questions as a UI form with text options.
-• Output ONLY the JSON block bounded by |||QUESTIONS_START and |||QUESTIONS_END.
-• Do not write any other text.
+TURN 1 (user describes task):
+• Acknowledge the task in 1 SHORT bullet — no repeating what they said
+• IF budget already known → skip budget question entirely, go to skill level or Turn 3
+• IF budget NOT mentioned → ask ONLY: "What is your budget?"
+• Output OPTIONS block ONLY if asking a question
 
-JSON FORMAT FOR TURN 1:
-|||QUESTIONS_START
-[
-  { "id": "budget", "label": "What is your budget?", "options": ["Free only", "Up to $20/mo", "Any budget"] },
-  { "id": "skill", "label": "What is your technical skill level?", "options": ["Beginner", "Intermediate", "Advanced"] },
-  { "id": "q3", "label": "Do you need offline support?", "options": ["Yes, must be offline", "No, cloud is fine"] }
-]
-|||QUESTIONS_END
+TURN 2 (after budget answered):
+• Do NOT say "Got it", "Noted", "Thanks", or repeat their budget back to them
+• IF skill level already known → skip, go to Turn 3
+• IF skill level NOT mentioned → ask ONLY: "What is your technical skill level?"
+• Output OPTIONS block only if asking the question
 
-TURN 2 (User provides bundled answers):
-• The user will reply with a single message containing all their selected answers (e.g., "Budget: Free only \n Skill: Beginner").
-• Acknowledge in 1 bullet ONLY: "• Got it — analyzing tools based on these constraints."
-• Immediately output the FINAL JSON recommendation block. Do not write any other text.
+TURN 3 (after skill level answered):
+• Do NOT repeat or confirm their skill level
+• Ask ONE specific clarifying question about the USE CASE — NOT about tool preference
+• Good examples: "What is your primary output format?", "Do you need it to work offline?", "Is this for a one-time task or ongoing use?"
+• BAD examples — NEVER ask: "Which tool do you prefer?", "Do you have a tool in mind?" — NEXUS decides the tool
+• Output OPTIONS block with 3-4 relevant choices
+
+TURN 4 (summary + confirmation — ONE TIME ONLY):
+• Show a single clean summary of EVERYTHING you understood. Format it as:
+"• Here is what I understood:
+  — Task: [one line]
+  — Budget: [value]
+  — Skill level: [value]
+  — Use case detail: [one line]"
+• Then ask ONE question: "• Do you have any specific tools or specifications in mind before I generate recommendations?"
+• Output this OPTIONS block:
+|||OPTIONS_START
+["No, generate recommendations", "Yes, I want to add something"]
+|||OPTIONS_END
+
+TURN 5a — If user says NO or "generate recommendations":
+• Immediately output the final JSON recommendation block. Do not write any other text.
+
+TURN 5b — If user says YES or adds something:
+• Acknowledge in 1 bullet: "• Got it — including that in the recommendations."
+• Immediately output the final JSON recommendation block. Do not write any other text.
 
 PROMPT ENGINEERING GUIDELINES (FOR tool_prompts):
 When generating the "prompt" strings inside the JSON block, you MUST act as an expert prompt engineer:
@@ -984,33 +1006,39 @@ let currentAIModel = 'llama-3.1-8b-instant'; // defaults to free tier model
 async function callGroq(userMessage) {
   messages.push({ role: 'user', content: userMessage });
   if (isFirstMessage) firstTaskDescription = userMessage;
-  const response = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: currentAIModel,
-      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-      max_tokens: 1200, temperature: 0.7, top_p: 0.9,
-      sessionId: SESSION_ID, taskDescription: firstTaskDescription,
-      meta: { isFirstMessage, domain: null, budget: null, skillLevel: null,
-              userId: currentUser?.id || null, userEmail: currentUser?.email || null,
-              anonId, fingerprint: visitorId }
-    })
-  });
-  if (!response.ok) {
-    const errText = await response.text();
-    try {
-      const errJson = JSON.parse(errText);
-      throw new Error(JSON.stringify(errJson));
-    } catch(e) {
-      throw new Error(JSON.stringify({ error: 'server_error', message: errText.slice(0, 300) }));
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: currentAIModel,
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+        max_tokens: 1200, temperature: 0.7, top_p: 0.9,
+        sessionId: SESSION_ID, taskDescription: firstTaskDescription,
+        meta: { isFirstMessage, domain: null, budget: null, skillLevel: null,
+                userId: currentUser?.id || null, userEmail: currentUser?.email || null,
+                anonId, fingerprint: visitorId }
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      try {
+        const errJson = JSON.parse(errText);
+        throw new Error(JSON.stringify(errJson));
+      } catch(e) {
+        throw new Error(JSON.stringify({ error: 'server_error', message: errText.slice(0, 300) }));
+      }
     }
+    isFirstMessage = false;
+    const data  = await response.json();
+    const reply = data.choices[0].message.content;
+    messages.push({ role: 'assistant', content: reply });
+    return reply;
+  } catch (error) {
+    messages.pop(); // rollback user message on failure
+    if (messages.length === 0) firstTaskDescription = '';
+    throw error;
   }
-  isFirstMessage = false;
-  const data  = await response.json();
-  const reply = data.choices[0].message.content;
-  messages.push({ role: 'assistant', content: reply });
-  return reply;
 }
 
 // ── UI HELPERS ────────────────────────────────────────────────
@@ -1397,28 +1425,32 @@ async function sendMessage(overrideText = null) {
 
     // Detect if JSON was expected but missing.
     // JSON is expected when user is past the confirmation turn:
-    // With our new 2-step logic, if there are 2 user messages, the AI MUST generate JSON recommendations.
-    const userCount = messages.filter(m => m.role === 'user').length;
-    const hasJSON   = reply.includes('|||JSON_START');
-    
-    if (userCount >= 2 && !hasJSON) {
-      console.warn('AI failed to output JSON block. Retrying...');
+    //   (a) 4+ user messages means we are definitely past confirmation, OR
+    //   (b) 3+ messages AND user just confirmed "no / generate / proceed"
+    const userCount   = messages.filter(m => m.role === 'user').length;
+    const hasJSON     = reply.includes('|||JSON_START');
+    const lastUserMsg = text.toLowerCase().trim();
+    const isConfirmNo = lastUserMsg.includes('no') ||
+                        lastUserMsg.includes('generate') ||
+                        lastUserMsg.includes('proceed') ||
+                        lastUserMsg.includes('yes, i want');
+    const isFinalTurn = userCount >= 4 || (userCount >= 3 && isConfirmNo);
+
+    if (isFinalTurn && !hasJSON) {
+      // Llama gave prose instead of JSON — force it with a direct retry message
       showTyping();
-      addMessage('ai', '• Compiling recommendations...');
+      addMessage('ai', '• Generating structured recommendations...');
       const retryReply = await callGroq(
-        "CRITICAL FAILURE: You failed to output ONLY the JSON recommendation block. You MUST format the output within |||JSON_START and |||JSON_END immediately. Do not write conversational prose."
+        'Output the final recommendations NOW using ONLY the |||JSON_START ... |||JSON_END format. ' +
+        'Do not write any text outside the JSON block. ' +
+        'Use all requirements gathered so far.'
       );
       hideTyping();
       reply = retryReply;
     }
 
-    const qResult = parseQuestions(reply);
     const toolResult = parseAndRenderTools(reply);
-
-    if (qResult) {
-      addMessage('ai', '• I need a few specific details to find the exact perfect tools.', qResult);
-      document.getElementById('chatInputArea').style.display = 'none';
-    } else if (toolResult !== null) {
+    if (toolResult !== null) {
       addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded →');
       document.getElementById('chatInputArea').style.display = 'none';
       document.getElementById('resetInputArea').style.display = 'flex';

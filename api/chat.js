@@ -47,6 +47,7 @@ export default async function handler(req, res) {
 
   // ── Verify session limits ────────
   const userId = meta?.userId;
+  let sub;
 
   // OPTIMIZATION: Only hit Supabase on the FIRST message (turn 1).
   if (meta?.isFirstMessage) {
@@ -60,15 +61,17 @@ export default async function handler(req, res) {
       const resData = await fetch(checkUrl, {
         headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` }
       });
-      
+
       if (resData.ok) {
         const records = await resData.json();
-        
+
         // If ANY matching record has >= 2 searches, BLOCK them
+        /*
         const limitReached = records.some(r => r.search_count >= 2);
         if (limitReached) {
           return res.status(429).json({ error: 'anon_limit_reached', message: 'Anonymous limit reached. Please sign in.' });
         }
+        */
 
         const myRecord = records.find(r => r.anon_id === anonId);
         if (myRecord) {
@@ -92,58 +95,58 @@ export default async function handler(req, res) {
         { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` } }
       );
       const subData = await subRes.json();
-      let sub = subData?.[0];
+      sub = subData?.[0];
 
-    // If no subscription record, create a default free one
-    if (!sub) {
+      // If no subscription record, create a default free one
+      if (!sub) {
+        const now = new Date();
+        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        sub = {
+          user_id: userId,
+          plan_id: 'free',
+          status: 'active',
+          sessions_used: 0,
+          quota: 3,
+          week_reset_date: nextWeek.toISOString(),
+          active_until: new Date(now.getTime() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString()
+        };
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions`, {
+          method: 'POST',
+          headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(sub)
+        });
+      }
+
+      // Check rolling week reset
       const now = new Date();
-      const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      sub = {
-        user_id: userId,
-        plan_id: 'free',
-        status: 'active',
-        sessions_used: 0,
-        quota: 3,
-        week_reset_date: nextWeek.toISOString(),
-        active_until: new Date(now.getTime() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString()
-      };
-      await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions`, {
-        method: 'POST',
-        headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub)
-      });
-    }
+      if (new Date(sub.week_reset_date) < now) {
+        sub.sessions_used = 0;
+        sub.week_reset_date = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
+          method: 'PATCH',
+          headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessions_used: 0, week_reset_date: sub.week_reset_date })
+        });
+      }
 
-    // Check rolling week reset
-    const now = new Date();
-    if (new Date(sub.week_reset_date) < now) {
-      sub.sessions_used = 0;
-      sub.week_reset_date = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
-        method: 'PATCH',
-        headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessions_used: 0, week_reset_date: sub.week_reset_date })
-      });
-    }
+      // Check monthly expiry
+      if (sub.plan_id !== 'free' && new Date(sub.active_until) < now) {
+        sub.plan_id = 'free';
+        sub.quota = 3;
+        await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
+          method: 'PATCH',
+          headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan_id: 'free', quota: 3 })
+        });
+      }
 
-    // Check monthly expiry
-    if (sub.plan_id !== 'free' && new Date(sub.active_until) < now) {
-      sub.plan_id = 'free';
-      sub.quota = 3;
-      await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
-        method: 'PATCH',
-        headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan_id: 'free', quota: 3 })
-      });
-    }
-
-    // Enforce quota
-    if (sub.sessions_used >= sub.quota) {
-      return res.status(429).json({
-        error: 'session_limit',
-        message: sub.plan_id === 'free' ? 'Free limit reached.' : 'Weekly session limit reached.'
-      });
-    }
+      // Enforce quota
+      if (sub.sessions_used >= sub.quota) {
+        return res.status(429).json({
+          error: 'session_limit',
+          message: sub.plan_id === 'free' ? 'Free limit reached.' : 'Weekly session limit reached.'
+        });
+      }
 
       // SUCCESS: Increment the counter so they consume 1 credit for this task
       await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
@@ -156,7 +159,7 @@ export default async function handler(req, res) {
 
   // ── Detect if this is the final recommendation turn ──────
   const userMessages = messages.filter(m => m.role === 'user');
-  const isFinalTurn  = userMessages.length >= 2;
+  const isFinalTurn = userMessages.length >= 2;
 
   // ── Step 1: Tavily search on turn 4 ──────────────────────
   let searchContext = '';
@@ -207,18 +210,18 @@ export default async function handler(req, res) {
           'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model:       model       || 'llama-3.1-8b-instant',
-          messages:    enrichedMessages,
-          max_tokens:  max_tokens  || 1200,
+          model: model || 'llama-3.1-8b-instant',
+          messages: enrichedMessages,
+          max_tokens: max_tokens || 1200,
           temperature: temperature || 0.7,
-          top_p:       top_p       || 0.9
+          top_p: top_p || 0.9
         })
       });
 
       // ── Handle rate limiting specifically ─────────────────
       if (groqRes.status === 429) {
         const retryAfter = groqRes.headers.get('retry-after') || groqRes.headers.get('x-ratelimit-reset-requests');
-        const waitMs     = retryAfter ? parseFloat(retryAfter) * 1000 : attempt * 2000;
+        const waitMs = retryAfter ? parseFloat(retryAfter) * 1000 : attempt * 2000;
 
         console.warn(`Groq rate limited on attempt ${attempt}. Waiting ${waitMs}ms before retry...`);
         lastError = { status: 429, message: 'rate_limit_exceeded' };
@@ -306,18 +309,18 @@ async function searchAITools(taskDescription, meta) {
 
   const domain = meta?.domain || '';
   const budget = meta?.budget || '';
-  const query  = buildSearchQuery(taskDescription, domain, budget);
+  const query = buildSearchQuery(taskDescription, domain, budget);
 
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      api_key:             process.env.TAVILY_API_KEY,
-      query:               query,
-      search_depth:        'basic',
-      include_domains:     ['theresanaiforthat.com'],
-      max_results:         8,
-      include_answer:      false,
+      api_key: process.env.TAVILY_API_KEY,
+      query: query,
+      search_depth: 'basic',
+      include_domains: ['theresanaiforthat.com'],
+      max_results: 8,
+      include_answer: false,
       include_raw_content: false
     })
   });
@@ -341,10 +344,10 @@ async function searchAIToolsFallback(query) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      api_key:        process.env.TAVILY_API_KEY,
-      query:          `best AI tools for ${query}`,
-      search_depth:   'basic',
-      max_results:    6,
+      api_key: process.env.TAVILY_API_KEY,
+      query: `best AI tools for ${query}`,
+      search_depth: 'basic',
+      max_results: 6,
       include_answer: false
     })
   });
@@ -372,11 +375,11 @@ function formatSearchResults(results, query) {
   ];
 
   results.forEach((r, i) => {
-    const title   = (r.title   || 'Unknown Tool').trim();
-    const url     = (r.url     || '').trim();
+    const title = (r.title || 'Unknown Tool').trim();
+    const url = (r.url || '').trim();
     const snippet = (r.content || r.snippet || '').trim().slice(0, 300);
     lines.push(`${i + 1}. ${title}`);
-    if (url)     lines.push(`   URL: ${url}`);
+    if (url) lines.push(`   URL: ${url}`);
     if (snippet) lines.push(`   Description: ${snippet}`);
     lines.push('');
   });
@@ -397,33 +400,33 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
 
   const headers = {
     'Content-Type': 'application/json',
-    'apikey':        SUPABASE_KEY,
+    'apikey': SUPABASE_KEY,
     'Authorization': `Bearer ${SUPABASE_KEY}`,
-    'Prefer':        'return=minimal'
+    'Prefer': 'return=minimal'
   };
 
-  const userId    = meta?.userId    || null;
+  const userId = meta?.userId || null;
   const userEmail = meta?.userEmail || null;
 
   if (meta?.isFirstMessage) {
     await dbInsert(SUPABASE_URL, headers, 'sessions', {
-      id:            sessionId,
-      domain:        meta.domain     || null,
-      budget:        meta.budget     || null,
-      skill_level:   meta.skillLevel || null,
+      id: sessionId,
+      domain: meta.domain || null,
+      budget: meta.budget || null,
+      skill_level: meta.skillLevel || null,
       pipeline_mode: false,
-      total_steps:   0,
-      user_id:       userId,
-      user_email:    userEmail
+      total_steps: 0,
+      user_id: userId,
+      user_email: userEmail
     });
 
     if (taskDescription) {
       await dbInsert(SUPABASE_URL, headers, 'user_tasks', {
-        session_id:       sessionId,
+        session_id: sessionId,
         task_description: taskDescription,
-        detected_domain:  meta.domain || null,
-        user_id:          userId,
-        user_email:       userEmail
+        detected_domain: meta.domain || null,
+        user_id: userId,
+        user_email: userEmail
       });
     }
   }
@@ -432,9 +435,9 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
   if (lastUserMsg) {
     await dbInsert(SUPABASE_URL, headers, 'messages', {
       session_id: sessionId,
-      role:       'user',
-      content:    lastUserMsg.content,
-      user_id:    userId,
+      role: 'user',
+      content: lastUserMsg.content,
+      user_id: userId,
       user_email: userEmail
     });
   }
@@ -442,9 +445,9 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
   if (replyText) {
     await dbInsert(SUPABASE_URL, headers, 'messages', {
       session_id: sessionId,
-      role:       'assistant',
-      content:    replyText,
-      user_id:    userId,
+      role: 'assistant',
+      content: replyText,
+      user_id: userId,
       user_email: userEmail
     });
   }
@@ -453,17 +456,17 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
     try {
       const match = replyText.match(/\|\|\|JSON_START\s*([\s\S]*?)\s*\|\|\|JSON_END/);
       if (match) {
-        const parsed     = JSON.parse(match[1]);
+        const parsed = JSON.parse(match[1]);
         const isPipeline = parsed.mode === 'pipeline';
-        const tools      = isPipeline
+        const tools = isPipeline
           ? parsed.pipeline.map(s => s.tool)
           : (parsed.tools || []);
 
         await dbPatch(SUPABASE_URL, headers, 'sessions', sessionId, {
           recommended_tools: tools,
-          pipeline_mode:     isPipeline,
-          total_steps:       isPipeline ? parsed.pipeline.length : 1,
-          domain:            parsed.domain || null
+          pipeline_mode: isPipeline,
+          total_steps: isPipeline ? parsed.pipeline.length : 1,
+          domain: parsed.domain || null
         });
       }
     } catch (e) {
@@ -475,9 +478,9 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
 async function dbInsert(url, headers, table, data) {
   try {
     const res = await fetch(`${url}/rest/v1/${table}`, {
-      method:  'POST',
+      method: 'POST',
       headers,
-      body:    JSON.stringify(data)
+      body: JSON.stringify(data)
     });
     if (!res.ok) console.warn(`DB insert [${table}] failed:`, await res.text());
   } catch (e) {
@@ -488,9 +491,9 @@ async function dbInsert(url, headers, table, data) {
 async function dbPatch(url, headers, table, id, data) {
   try {
     const res = await fetch(`${url}/rest/v1/${table}?id=eq.${id}`, {
-      method:  'PATCH',
+      method: 'PATCH',
       headers,
-      body:    JSON.stringify(data)
+      body: JSON.stringify(data)
     });
     if (!res.ok) console.warn(`DB patch [${table}] failed:`, await res.text());
   } catch (e) {
