@@ -23,8 +23,8 @@ async function initSupabase() {
       updateAuthUI();
     });
 
-    // Show login modal 2s after page load if not signed in
-    setTimeout(() => { if (!currentUser) openAuthModal(); }, 2000);
+    // Show login modal immediately on page load if not signed in
+    if (!currentUser) openAuthModal();
   } catch(e) { 
     console.warn('Supabase init failed:', e.message); 
   }

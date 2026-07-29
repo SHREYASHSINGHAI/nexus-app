@@ -61,7 +61,14 @@ async function testAIResponseParsing() {
       throw new Error('Failed to parse mixed/malformed OPTIONS block fallback.');
     }
 
-    console.log('✓ Test 1 Passed: Options correctly extracted (including double, single, and fallback formats).');
+    // Test 1d: Plain bulleted/numbered list without quotes
+    const mockReplyPlain = "Based on your task, pick:\n|||OPTIONS_START\n- Option One\n- Option Two\n|||OPTIONS_END";
+    const optionsPlain = sandbox.parseOptions(mockReplyPlain);
+    if (!optionsPlain || optionsPlain[0] !== 'Option One' || optionsPlain[1] !== 'Option Two') {
+      throw new Error('Failed to parse plain bulleted/numbered list fallback.');
+    }
+
+    console.log('✓ Test 1 Passed: Options correctly extracted (including double, single, plain, and fallback formats).');
   } catch (err) {
     // Error: Options parser failed to extract option array from OPTIONS markers.
     console.error('✗ Test 1 Failed:', err.message);

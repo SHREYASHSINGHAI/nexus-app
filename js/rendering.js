@@ -15,6 +15,13 @@ function parseOptions(reply) {
     if (matches.length > 0) {
       return matches.map(match => match[1] || match[2]);
     }
+    // Fallback: split by line and strip leading bullets, numbers, or dashes
+    const lines = raw.split('\n')
+      .map(line => line.replace(/^[-*•+\d.]\s*/, '').trim())
+      .filter(line => line.length > 0);
+    if (lines.length > 0) {
+      return lines;
+    }
     return null;
   }
 }
