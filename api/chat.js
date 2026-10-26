@@ -204,6 +204,9 @@ export default async function handler(req, res) {
     });
   }
 
+  const requestedModel = process.env.GROQ_MODEL || model || 'llama-3.3-70b-versatile';
+  let activeModel = await resolveGroqModel(requestedModel, process.env.GROQ_API_KEY);
+
   let groqData;
   let lastError;
 
@@ -217,7 +220,7 @@ export default async function handler(req, res) {
           'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: model || 'llama-3.3-70b-versatile',
+          model: activeModel,
           messages: enrichedMessages,
           max_tokens: max_tokens || 1200,
           temperature: temperature || 0.7,
@@ -264,10 +267,10 @@ export default async function handler(req, res) {
 
         // Model not found or decommissioned
         if (groqRes.status === 404 || groqCode === 'model_not_found' || groqCode === 'model_decommissioned' || rawGroqMsg.includes('does not exist') || rawGroqMsg.includes('decommissioned')) {
-          const requestedModel = model || 'llama-3.3-70b-versatile';
+          const avail = await getAvailableGroqModels(process.env.GROQ_API_KEY, true);
           return res.status(404).json({
             error: 'groq_model',
-            message: `Model "${requestedModel}" is not available or decommissioned on Groq. Please check console.groq.com.`
+            message: `Model "${activeModel}" is not available on your Groq key. Available models for your key: ${avail.slice(0, 5).join(', ') || 'none found'}. Visit /api/models to view full list.`
           });
         }
 
@@ -536,3 +539,70 @@ async function dbPatch(url, headers, table, id, data) {
     console.warn(`DB patch [${table}] error:`, e.message);
   }
 }
+
+
+// ============================================================
+// DYNAMIC GROQ MODEL RESOLUTION & FALLBACK
+// ============================================================
+let cachedGroqModels = null;
+let lastCacheTimestamp = 0;
+
+async function getAvailableGroqModels(apiKey, force = false) {
+  const now = Date.now();
+  if (!force && cachedGroqModels && (now - lastCacheTimestamp < 5 * 60 * 1000)) {
+    return cachedGroqModels;
+  }
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const all = (data?.data || []).map(m => m.id);
+      cachedGroqModels = all.filter(id => !id.includes('whisper') && !id.includes('guard'));
+      lastCacheTimestamp = now;
+      return cachedGroqModels;
+    }
+  } catch (err) {
+    console.warn('[GROQ] Could not fetch models list:', err.message);
+  }
+  return cachedGroqModels || [];
+}
+
+async function resolveGroqModel(requestedModel, apiKey) {
+  if (process.env.GROQ_MODEL) {
+    return process.env.GROQ_MODEL;
+  }
+
+  const available = await getAvailableGroqModels(apiKey);
+  if (!available || available.length === 0) {
+    return requestedModel || 'openai/gpt-oss-120b';
+  }
+
+  // If requested model is available, use it
+  if (requestedModel && available.includes(requestedModel)) {
+    return requestedModel;
+  }
+
+  // Priority order of high-performance models
+  const priority = [
+    'llama-3.3-70b-versatile',
+    'openai/gpt-oss-120b',
+    'openai/gpt-oss-20b',
+    'qwen/qwen3.8-27b',
+    'llama-3.1-8b-instant'
+  ];
+
+  for (const candidate of priority) {
+    if (available.includes(candidate)) {
+      console.log(`[GROQ] Requested model "${requestedModel}" not found on key. Auto-selected active model: "${candidate}"`);
+      return candidate;
+    }
+  }
+
+  return available[0] || requestedModel || 'openai/gpt-oss-120b';
+}
+
