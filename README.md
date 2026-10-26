@@ -34,7 +34,7 @@ NEXUS extracts budget + skill level from your message (skips asking if already s
         ↓
 Live search of theresanaiforthat.com via Tavily API
         ↓
-Llama 3.3 70B ranks tools by requirement fit — no bias
+Dynamic Model Resolution (Auto-discovers active Groq models & ranks tools)
         ↓
 Recommendations with scores, tradeoffs, prompts, and a step-by-step execution roadmap
 ```
@@ -43,11 +43,14 @@ Recommendations with scores, tradeoffs, prompts, and a step-by-step execution ro
 
 ## Features
 
-### Intelligence
+### Intelligence & Resilience
 
 | Feature | Description |
 |---------|-------------|
 | Smart extraction | Reads budget and skill from your first message — never asks twice |
+| Dynamic Model Discovery | Auto-discovers active models for your Groq API key with 5-min in-memory caching |
+| Automatic Model Fallback | Seamlessly routes requests to high-performance available models (`llama-3.3-70b-versatile`, `openai/gpt-oss-120b`, `openai/gpt-oss-20b`) |
+| Rate-Limit Resilience | Handles HTTP 429 spikes with automatic exponential backoff retry loops |
 | Single tool mode | Top 3 tools ranked by fit score with detailed reasoning |
 | Pipeline mode | Detects multi-domain tasks and builds a connected workflow across multiple tools |
 | Live search | Searches theresanaiforthat.com on the final turn via Tavily API |
@@ -63,20 +66,22 @@ Recommendations with scores, tradeoffs, prompts, and a step-by-step execution ro
 | Execution Roadmap | Numbered action steps with prompts embedded inline at each step |
 | Quick Start Guides | Collapsible 4-step setup guide inside every tool card |
 
-### Account & Access
+### Account, Access & Subscriptions
 
 | Feature | Description |
 |---------|-------------|
 | Session History | Logged-in users can browse all past sessions and reopen any recommendation |
 | PDF Export | Download a clean formatted PDF of any recommendation |
 | Share Link | Generate a short unique URL to share any recommendation with teammates |
-| Session limit | Free users get 3 full workflows per week; paid tiers up to 1000/week |
+| Session Limit & Quota | Free users get 3 full workflows per week; paid tiers up to 1000/week |
+| Subscriptions & Payments | Multi-currency Razorpay checkout with localized INR and USD pricing |
 | Mandatory Auth | Google OAuth exclusively via Supabase |
 
-### Safety
+### Safety & Error Handling
 
 | Feature | Description |
 |---------|-------------|
+| Categorized Error UI | Translates raw API errors into clean, actionable status cards (Auth, Model, Limit, Quota) |
 | Medical guardrail | Blocks personal medical advice requests; shows Indian emergency numbers |
 | Smart detection | "Build a medicine tracker app" is correctly treated as a coding task, not a medical query |
 
@@ -87,10 +92,11 @@ Recommendations with scores, tradeoffs, prompts, and a step-by-step execution ro
 | Layer | Technology |
 |-------|------------|
 | Frontend | Vanilla HTML + CSS + JS — single `index.html`, no build step |
-| AI Model | Llama 3.3 70B via [Groq](https://groq.com) |
+| AI Engine | Dynamic Model Resolution & Fallback via [Groq](https://groq.com) LPU (`llama-3.3-70b-versatile`, `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, etc.) |
 | Live Search | [Tavily API](https://tavily.com) → theresanaiforthat.com |
-| Auth | [Supabase Auth](https://supabase.com) — Google OAuth + Email/Password |
-| Hosting | [Vercel](https://vercel.com) — auto-deploys on `git push` |
+| Auth & DB | [Supabase](https://supabase.com) — Auth, User Sessions & Subscription Quotas |
+| Payments | [Razorpay](https://razorpay.com) — Multi-currency subscriptions |
+| Hosting | [Vercel](https://vercel.com) — Serverless Functions & Edge Routing |
 | Fonts | Syne · JetBrains Mono · Instrument Serif |
 
 ---
@@ -99,15 +105,16 @@ Recommendations with scores, tradeoffs, prompts, and a step-by-step execution ro
 
 ```
 nexus-app/
-├── index.html          ← Entire frontend — HTML, CSS, and JS in one file
+├── index.html            ← Entire frontend — HTML, CSS, and JS in one file
 ├── api/
-│   ├── chat.js             ← Groq proxy + Tavily live search + quota enforcement
-│   ├── config.js           ← Serves Supabase public config and Razorpay keys
-│   ├── share.js            ← Creates and retrieves shared recommendation URLs
-│   ├── create-order.js     ← Multi-currency Razorpay order creation
-│   └── verify-payment.js   ← Secure Razorpay payload verification and DB updates
-├── vercel.json             ← API routing configuration
-└── package.json            ← Dependencies including Razorpay SDK
+│   ├── chat.js           ← Dynamic model resolution + Groq proxy + Tavily live search + quota enforcement
+│   ├── models.js         ← Diagnostic endpoint to list active Groq models for your key
+│   ├── config.js         ← Serves Supabase public config and Razorpay keys
+│   ├── share.js          ← Creates and retrieves shared recommendation URLs
+│   ├── create-order.js   ← Multi-currency Razorpay order creation
+│   └── verify-payment.js ← Secure Razorpay payload verification and DB updates
+├── vercel.json           ← API routing and serverless function configuration
+└── package.json          ← Dependencies including Razorpay SDK
 ```
 
 > **Why `config.js`?** The Supabase anon key must reach the browser to initialise Auth, but hardcoding it in `index.html` exposes it in source. `config.js` reads it from Vercel environment variables at request time — credentials stay in Vercel, out of the codebase entirely.
@@ -116,17 +123,18 @@ nexus-app/
 
 ## Environment Variables
 
-Set all four in **Vercel → Project → Settings → Environment Variables**.
-Never put these in any code file.
+Configure these in **Vercel → Project → Settings → Environment Variables**.
+Never commit these in any public code file.
 
-| Variable | How to get it |
-|----------|--------------|
-| `GROQ_API_KEY` | [console.groq.com](https://console.groq.com) → API Keys |
-| `TAVILY_API_KEY` | [app.tavily.com](https://app.tavily.com) → Dashboard |
-| `SUPABASE_URL` | Supabase → Settings → API → Project URL |
-| `SUPABASE_ANON_KEY` | Supabase → Settings → API Keys → Publishable key |
-| `RAZORPAY_KEY_ID` | Razorpay Dashboard → Settings → API Keys |
-| `RAZORPAY_KEY_SECRET` | Razorpay Dashboard → Settings → API Keys |
+| Variable | Required | Description / How to get it |
+|----------|:--------:|------------------------------|
+| `GROQ_API_KEY` | **Yes** | [console.groq.com](https://console.groq.com) → API Keys |
+| `TAVILY_API_KEY` | **Yes** | [app.tavily.com](https://app.tavily.com) → Dashboard |
+| `SUPABASE_URL` | **Yes** | Supabase Project Settings → API → Project URL |
+| `SUPABASE_ANON_KEY` | **Yes** | Supabase Project Settings → API Keys → `anon` public key |
+| `RAZORPAY_KEY_ID` | Optional | Razorpay Dashboard → Settings → API Keys |
+| `RAZORPAY_KEY_SECRET` | Optional | Razorpay Dashboard → Settings → API Keys |
+| `GROQ_MODEL` | Optional | Force a specific Groq model (e.g. `llama-3.3-70b-versatile`, `openai/gpt-oss-120b`). Defaults to automatic auto-detection. |
 
 ---
 
@@ -224,6 +232,26 @@ Main conversation endpoint. Proxies to Groq. On the final turn, runs a Tavily se
 </details>
 
 **Response:** Standard OpenAI-compatible chat completion object.
+
+---
+
+### `GET /api/models`
+
+Live diagnostic endpoint. Queries Groq API in real-time with your configured `GROQ_API_KEY` and returns the exact list of chat models active on your account.
+
+```json
+{
+  "status": "success",
+  "totalModels": 24,
+  "chatModels": [
+    "llama-3.3-70b-versatile",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3.8-27b"
+  ],
+  "allModels": [...]
+}
+```
 
 ---
 
