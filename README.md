@@ -212,10 +212,10 @@ npx vercel dev
 
 ### `POST /api/chat`
 
-Main conversation endpoint. Proxies to Groq. On the final turn, runs a Tavily search first and injects live results into the system prompt before calling Llama.
+Main conversation endpoint. Performs dynamic model resolution on Groq, runs live web search via Tavily on turn 2+, and enforces subscription quotas.
 
 <details>
-<summary>Request body</summary>
+<summary>Request body (from <code>index.html</code>)</summary>
 
 ```json
 {
@@ -224,30 +224,43 @@ Main conversation endpoint. Proxies to Groq. On the final turn, runs a Tavily se
     { "role": "system", "content": "..." },
     { "role": "user", "content": "..." }
   ],
-  "max_tokens": 8000,
+  "max_tokens": 1200,
   "temperature": 0.7,
-  "top_p": 0.9
+  "top_p": 0.9,
+  "sessionId": "b8f047bb-a982-4ad5-9dfc-c76b92a34346",
+  "taskDescription": "Build a personal portfolio website",
+  "meta": {
+    "isFirstMessage": true,
+    "domain": null,
+    "budget": null,
+    "skillLevel": null,
+    "userId": "user-uuid-or-null",
+    "userEmail": "user@example.com",
+    "anonId": "anon-session-id",
+    "fingerprint": "visitor-id"
+  }
 }
 ```
 </details>
 
-**Response:** Standard OpenAI-compatible chat completion object.
+**Response:** Standard OpenAI-compatible chat completion object from Groq, or categorized error JSON (`groq_auth`, `groq_model`, `context_length`, `rate_limit`, `session_limit`).
 
 ---
 
 ### `GET /api/models`
 
-Live diagnostic endpoint. Queries Groq API in real-time with your configured `GROQ_API_KEY` and returns the exact list of chat models active on your account.
+Live diagnostic endpoint. Authenticates with your `GROQ_API_KEY` and returns the real-time list of available models for your specific Groq key.
 
 ```json
 {
   "status": "success",
-  "totalModels": 24,
+  "totalModels": 28,
   "chatModels": [
     "llama-3.3-70b-versatile",
     "openai/gpt-oss-120b",
     "openai/gpt-oss-20b",
-    "qwen/qwen3.8-27b"
+    "qwen/qwen3.8-27b",
+    "llama-3.1-8b-instant"
   ],
   "allModels": [...]
 }
@@ -257,13 +270,51 @@ Live diagnostic endpoint. Queries Groq API in real-time with your configured `GR
 
 ### `GET /api/config`
 
-Called once on page load. Returns public Supabase credentials so the browser can initialise the Auth client — without those keys being hardcoded in HTML.
+Called on frontend initialization. Serves public Supabase and Razorpay credentials without hardcoding secrets in client HTML.
 
 ```json
 {
   "supabaseUrl": "https://your-project.supabase.co",
-  "supabaseAnon": "your-publishable-key"
+  "supabaseAnon": "your-publishable-key",
+  "razorpayKey": "rzp_live_or_test_key"
 }
+```
+
+---
+
+### `POST /api/create-order`
+
+Initializes a Razorpay subscription order. Detects user country via Vercel edge headers (`x-vercel-ip-country`) to automatically switch between INR and USD pricing.
+
+```json
+// Request
+{ "plan_id": "basic" } // "basic" | "pro" | "max"
+
+// Response (India)
+{ "id": "order_EKfLwp8P5Q40st", "currency": "INR", "amount": 4900 }
+
+// Response (International)
+{ "id": "order_EKfLwp8P5Q40st", "currency": "USD", "amount": 99 }
+```
+
+---
+
+### `POST /api/verify-payment`
+
+Verifies the cryptographic HMAC SHA-256 signature from Razorpay and updates the user's subscription record in Supabase.
+
+```json
+// Request
+{
+  "razorpay_order_id": "order_EKfLwp8P5Q40st",
+  "razorpay_payment_id": "pay_29QQoUBi66xm2f",
+  "razorpay_signature": "9ef5743127cd0f8e974d4be44f51e00b20667d52800098ec1cac85c8acc47d05",
+  "plan_id": "basic",
+  "user_id": "uuid"
+}
+
+// Response
+{ "success": true }
 ```
 
 ---
@@ -274,7 +325,7 @@ Generates a unique 8-character share ID for a recommendation session.
 
 ```json
 // Request
-{ "sessionId": "uuid" }
+{ "sessionId": "b8f047bb-a982-4ad5-9dfc-c76b92a34346" }
 
 // Response
 { "shareId": "a1b2c3d4" }
@@ -300,31 +351,44 @@ Retrieves a shared recommendation. No login required to view a shared link.
 
 ---
 
-## Built-in Tool Database
+## Subscription Plans & Limits
 
-25 tools across 8 domains. Known tools render as full cards with guides, tradeoffs, and prompts. Tools discovered via live search render as fallback cards with a direct theresanaiforthat.com link.
+Quotas and pricing implemented in `api/create-order.js`, `api/verify-payment.js`, and `index.html`:
 
-| Domain | Tools included |
-|--------|---------------|
-| Writing | Claude · ChatGPT · Jasper AI · Notion AI |
-| Coding | GitHub Copilot · Cursor · Replit AI · Codeium |
-| Image | Midjourney · DALL-E 3 · Stable Diffusion · Adobe Firefly |
-| Research | Perplexity AI · Elicit · NotebookLM |
-| Voice | ElevenLabs · Suno AI |
-| Video | Runway ML · Sora · HeyGen |
-| Automation | Make · n8n · Zapier |
-| Data | Julius AI · ChatGPT Advanced Data Analysis |
+| Plan ID | Plan Name | Workflows Quota | Price (India) | Price (International) | Reset Interval |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| **`free`** | Free Tier | **3 workflows** / week | Free | Free | Rolling 7 days |
+| **`basic`** | Basic Tier | **35 workflows** / week | **₹49** / month | **$0.99** / month | Rolling 7 days |
+| **`pro`** | Pro Tier | **70 workflows** / week | **₹99** / month | **$1.99** / month | Rolling 7 days |
+| **`max`** | Agency Tier | **1,000 workflows** / week | **₹399** / month | **$5.00** / month | Rolling 7 days |
 
 ---
 
-## Free Tier Limits
+## Built-in Tool Database
 
-| Service | Free allowance | Resets |
-|---------|---------------|--------|
-| Groq | 30 req/min · 1,000 req/day · 500K tokens/day | Midnight PT |
-| Tavily | 1,000 searches/month | Monthly |
-| Supabase | 500MB storage · 50,000 monthly active users | Monthly |
-| Vercel | 100GB bandwidth · unlimited deployments | Monthly |
+**25 curated tools across 8 domains** hardcoded in `AI_TOOLS_DB` within `index.html`. Known tools render as full cards with step-by-step guides, honest tradeoffs, and copyable prompts. Tools discovered live via Tavily API render as supplementary tool cards with a direct link.
+
+| Domain | Count | Tools Included |
+|:---|:---:|:---|
+| **Writing** | 4 | Claude (Anthropic) · ChatGPT (OpenAI) · Jasper AI · Notion AI |
+| **Coding** | 4 | GitHub Copilot · Cursor · Replit AI · Codeium |
+| **Image** | 4 | Midjourney · DALL-E 3 (OpenAI) · Stable Diffusion (Auto1111) · Adobe Firefly |
+| **Research** | 3 | Perplexity AI · Elicit · NotebookLM (Google) |
+| **Voice** | 2 | ElevenLabs · Suno AI |
+| **Video** | 3 | Runway ML · Sora (OpenAI) · HeyGen |
+| **Automation** | 3 | Make (Integromat) · n8n · Zapier |
+| **Data** | 2 | Julius AI · ChatGPT Advanced Data Analysis |
+
+---
+
+## Service Tier Limits
+
+| Service | Allowance | Frequency / Resets |
+|---------|-----------|--------------------|
+| **Groq API** | Rate limits vary by active model (RPM / TPM / RPD) | Check [console.groq.com/settings/limits](https://console.groq.com/settings/limits) |
+| **Tavily API** | 1,000 searches / month | Monthly billing cycle |
+| **Supabase** | 500 MB database · 50,000 monthly active users | Monthly |
+| **Vercel** | 100 GB edge bandwidth · Serverless execution limits | Monthly |
 
 > At 4 Groq calls + 1 Tavily search per session, the free tiers comfortably support **~200 full sessions per day**.
 
