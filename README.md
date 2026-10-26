@@ -34,7 +34,7 @@ NEXUS extracts budget + skill level from your message (skips asking if already s
         ↓
 Live search of theresanaiforthat.com via Tavily API
         ↓
-Llama 3.1 8B ranks tools by requirement fit — no bias
+Llama 3.3 70B ranks tools by requirement fit — no bias
         ↓
 Recommendations with scores, tradeoffs, prompts, and a step-by-step execution roadmap
 ```
@@ -87,7 +87,7 @@ Recommendations with scores, tradeoffs, prompts, and a step-by-step execution ro
 | Layer | Technology |
 |-------|------------|
 | Frontend | Vanilla HTML + CSS + JS — single `index.html`, no build step |
-| AI Model | Llama 3.1 8B (Free) / Llama 3.3 70B (Pro) via [Groq](https://groq.com) |
+| AI Model | Llama 3.3 70B via [Groq](https://groq.com) |
 | Live Search | [Tavily API](https://tavily.com) → theresanaiforthat.com |
 | Auth | [Supabase Auth](https://supabase.com) — Google OAuth + Email/Password |
 | Hosting | [Vercel](https://vercel.com) — auto-deploys on `git push` |
@@ -211,7 +211,7 @@ Main conversation endpoint. Proxies to Groq. On the final turn, runs a Tavily se
 
 ```json
 {
-  "model": "llama-3.1-8b-instant",
+  "model": "llama-3.3-70b-versatile",
   "messages": [
     { "role": "system", "content": "..." },
     { "role": "user", "content": "..." }

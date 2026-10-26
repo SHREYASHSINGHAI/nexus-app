@@ -504,17 +504,16 @@ async function fetchUserPlan() {
     const { data, error } = await sb.from('subscriptions').select('plan_id').eq('user_id', currentUser.id).single();
     if (error || !data) {
       tierEl.innerHTML = 'You are currently using <b>free tier</b>';
-      currentAIModel = 'llama-3.1-8b-instant';
+      currentAIModel = 'llama-3.3-70b-versatile';
       return;
     }
     const plans = { 'free': 'free tier', 'basic': 'basic tier', 'pro': 'pro tier', 'max': 'agency tier' };
     const planName = plans[data.plan_id] || 'free tier';
     tierEl.innerHTML = `You are currently using <b>${planName}</b>`;
-    // Paid tiers unlock the 70B model
-    currentAIModel = (data.plan_id === 'free') ? 'llama-3.1-8b-instant' : 'llama-3.3-70b-versatile';
+    currentAIModel = 'llama-3.3-70b-versatile';
   } catch(e) {
     tierEl.innerHTML = 'You are currently using <b>free tier</b>';
-    currentAIModel = 'llama-3.1-8b-instant';
+    currentAIModel = 'llama-3.3-70b-versatile';
   }
 }
 
@@ -1000,7 +999,7 @@ let messages = [], isThinking = false;
 const SESSION_ID = crypto.randomUUID();
 let isFirstMessage = true, firstTaskDescription = '';
 let lastRecommendationData = null; // for PDF export
-let currentAIModel = 'llama-3.1-8b-instant'; // defaults to free tier model
+let currentAIModel = 'llama-3.3-70b-versatile';
 
 // ── GROQ API CALL ─────────────────────────────────────────────
 async function callGroq(userMessage) {
