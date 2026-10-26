@@ -51,109 +51,108 @@ export default async function handler(req, res) {
 
   // OPTIMIZATION: Only hit Supabase on the FIRST message (turn 1).
   if (meta?.isFirstMessage) {
-    if (!userId) {
-      // ── ANONYMOUS LOGIC ──────────────────────────────────────
-      const ipAddress = req.headers['x-forwarded-for'] || '0.0.0.0';
-      const anonId = meta?.anonId || 'unknown';
-      const fp = meta?.fingerprint || 'unknown';
+    try {
+      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+        console.warn('[SUPABASE] Missing Supabase environment variables, skipping quota verification.');
+      } else if (!userId) {
+        // ── ANONYMOUS LOGIC ──────────────────────────────────────
+        const ipAddress = req.headers['x-forwarded-for'] || '0.0.0.0';
+        const anonId = meta?.anonId || 'unknown';
+        const fp = meta?.fingerprint || 'unknown';
 
-      const checkUrl = `${process.env.SUPABASE_URL}/rest/v1/anon_usage?or=(anon_id.eq.${anonId},fingerprint.eq.${fp},ip_address.eq.${ipAddress})&select=*`;
-      const resData = await fetch(checkUrl, {
-        headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` }
-      });
+        const checkUrl = `${process.env.SUPABASE_URL}/rest/v1/anon_usage?or=(anon_id.eq.${anonId},fingerprint.eq.${fp},ip_address.eq.${ipAddress})&select=*`;
+        const resData = await fetch(checkUrl, {
+          headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` }
+        });
 
-      if (resData.ok) {
-        const records = await resData.json();
-
-        // If ANY matching record has >= 2 searches, BLOCK them
-        /*
-        const limitReached = records.some(r => r.search_count >= 2);
-        if (limitReached) {
-          return res.status(429).json({ error: 'anon_limit_reached', message: 'Anonymous limit reached. Please sign in.' });
+        if (resData.ok) {
+          const records = await resData.json();
+          const myRecord = Array.isArray(records) ? records.find(r => r.anon_id === anonId) : null;
+          if (myRecord) {
+            await fetch(`${process.env.SUPABASE_URL}/rest/v1/anon_usage?anon_id=eq.${anonId}`, {
+              method: 'PATCH',
+              headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ search_count: myRecord.search_count + 1 })
+            });
+          } else {
+            await fetch(`${process.env.SUPABASE_URL}/rest/v1/anon_usage`, {
+              method: 'POST',
+              headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ anon_id: anonId, fingerprint: fp, ip_address: ipAddress, search_count: 1 })
+            });
+          }
         }
-        */
+      } else {
+        // ── REGISTERED LOGIC ─────────────────────────────────────
+        const subRes = await fetch(
+          `${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}&select=*`,
+          { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` } }
+        );
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          sub = Array.isArray(subData) ? subData[0] : null;
 
-        const myRecord = records.find(r => r.anon_id === anonId);
-        if (myRecord) {
-          await fetch(`${process.env.SUPABASE_URL}/rest/v1/anon_usage?anon_id=eq.${anonId}`, {
+          // If no subscription record, create a default free one
+          if (!sub) {
+            const now = new Date();
+            const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            sub = {
+              user_id: userId,
+              plan_id: 'free',
+              status: 'active',
+              sessions_used: 0,
+              quota: 3,
+              week_reset_date: nextWeek.toISOString(),
+              active_until: new Date(now.getTime() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString()
+            };
+            await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions`, {
+              method: 'POST',
+              headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(sub)
+            });
+          }
+
+          // Check rolling week reset
+          const now = new Date();
+          if (new Date(sub.week_reset_date) < now) {
+            sub.sessions_used = 0;
+            sub.week_reset_date = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+            await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
+              method: 'PATCH',
+              headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessions_used: 0, week_reset_date: sub.week_reset_date })
+            });
+          }
+
+          // Check monthly expiry
+          if (sub.plan_id !== 'free' && new Date(sub.active_until) < now) {
+            sub.plan_id = 'free';
+            sub.quota = 3;
+            await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
+              method: 'PATCH',
+              headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ plan_id: 'free', quota: 3 })
+            });
+          }
+
+          // Enforce quota
+          if (sub.sessions_used >= sub.quota) {
+            return res.status(429).json({
+              error: 'session_limit',
+              message: sub.plan_id === 'free' ? 'Free limit reached.' : 'Weekly session limit reached.'
+            });
+          }
+
+          // SUCCESS: Increment the counter so they consume 1 credit for this task
+          await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
             method: 'PATCH',
             headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ search_count: myRecord.search_count + 1 })
-          });
-        } else {
-          await fetch(`${process.env.SUPABASE_URL}/rest/v1/anon_usage`, {
-            method: 'POST',
-            headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ anon_id: anonId, fingerprint: fp, ip_address: ipAddress, search_count: 1 })
+            body: JSON.stringify({ sessions_used: sub.sessions_used + 1 })
           });
         }
       }
-    } else {
-      // ── REGISTERED LOGIC ─────────────────────────────────────
-      const subRes = await fetch(
-        `${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}&select=*`,
-        { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` } }
-      );
-      const subData = await subRes.json();
-      sub = subData?.[0];
-
-      // If no subscription record, create a default free one
-      if (!sub) {
-        const now = new Date();
-        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        sub = {
-          user_id: userId,
-          plan_id: 'free',
-          status: 'active',
-          sessions_used: 0,
-          quota: 3,
-          week_reset_date: nextWeek.toISOString(),
-          active_until: new Date(now.getTime() + 10 * 365 * 24 * 60 * 60 * 1000).toISOString()
-        };
-        await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions`, {
-          method: 'POST',
-          headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(sub)
-        });
-      }
-
-      // Check rolling week reset
-      const now = new Date();
-      if (new Date(sub.week_reset_date) < now) {
-        sub.sessions_used = 0;
-        sub.week_reset_date = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
-          method: 'PATCH',
-          headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessions_used: 0, week_reset_date: sub.week_reset_date })
-        });
-      }
-
-      // Check monthly expiry
-      if (sub.plan_id !== 'free' && new Date(sub.active_until) < now) {
-        sub.plan_id = 'free';
-        sub.quota = 3;
-        await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
-          method: 'PATCH',
-          headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan_id: 'free', quota: 3 })
-        });
-      }
-
-      // Enforce quota
-      if (sub.sessions_used >= sub.quota) {
-        return res.status(429).json({
-          error: 'session_limit',
-          message: sub.plan_id === 'free' ? 'Free limit reached.' : 'Weekly session limit reached.'
-        });
-      }
-
-      // SUCCESS: Increment the counter so they consume 1 credit for this task
-      await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
-        method: 'PATCH',
-        headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessions_used: sub.sessions_used + 1 })
-      });
+    } catch (err) {
+      console.warn('[SUPABASE] Session quota check error (non-fatal):', err.message);
     }
   }
 
@@ -197,6 +196,14 @@ export default async function handler(req, res) {
 
 
   // ── Step 3: Call Groq with retry on rate limit ────────────
+  if (!process.env.GROQ_API_KEY) {
+    console.error('[GROQ] GROQ_API_KEY environment variable is not configured.');
+    return res.status(500).json({
+      error: 'groq_auth',
+      message: 'GROQ_API_KEY is not configured. Please add it in Vercel → Settings → Environment Variables.'
+    });
+  }
+
   let groqData;
   let lastError;
 
@@ -223,7 +230,7 @@ export default async function handler(req, res) {
         const retryAfter = groqRes.headers.get('retry-after') || groqRes.headers.get('x-ratelimit-reset-requests');
         const waitMs = retryAfter ? parseFloat(retryAfter) * 1000 : attempt * 2000;
 
-        console.warn(`Groq rate limited on attempt ${attempt}. Waiting ${waitMs}ms before retry...`);
+        console.warn(`[GROQ] Rate limited on attempt ${attempt}. Waiting ${waitMs}ms before retry...`);
         lastError = { status: 429, message: 'rate_limit_exceeded' };
 
         if (attempt < 3) {
@@ -233,20 +240,49 @@ export default async function handler(req, res) {
           // All retries exhausted — return a user-friendly message
           return res.status(429).json({
             error: 'rate_limit',
-            message: 'NEXUS is experiencing high traffic right now. Please wait a moment and try again.'
+            message: 'NEXUS is experiencing high traffic right now. Please wait 30 seconds and try again.'
           });
         }
       }
 
       // ── Handle other Groq errors ──────────────────────────
       if (!groqRes.ok) {
-        const errBody = await groqRes.json().catch(() => ({ error: 'unknown' }));
-        console.error(`Groq error ${groqRes.status}:`, errBody);
+        const errBody = await groqRes.json().catch(() => ({}));
+        console.error(`[GROQ] Error HTTP ${groqRes.status}:`, errBody);
 
-        // Don't retry on non-rate-limit errors
+        const rawGroqMsg = errBody?.error?.message || errBody?.message || '';
+        const groqType   = errBody?.error?.type || '';
+        const groqCode   = errBody?.error?.code || '';
+
+        // Authentication failure
+        if (groqRes.status === 401 || rawGroqMsg.toLowerCase().includes('api key') || groqCode === 'invalid_api_key') {
+          return res.status(401).json({
+            error: 'groq_auth',
+            message: 'GROQ_API_KEY is missing or invalid. Please update it in Vercel → Settings → Environment Variables.'
+          });
+        }
+
+        // Model not found or decommissioned
+        if (groqRes.status === 404 || groqCode === 'model_not_found' || groqCode === 'model_decommissioned' || rawGroqMsg.includes('does not exist') || rawGroqMsg.includes('decommissioned')) {
+          const requestedModel = model || 'llama-3.3-70b-versatile';
+          return res.status(404).json({
+            error: 'groq_model',
+            message: `Model "${requestedModel}" is not available or decommissioned on Groq. Please check console.groq.com.`
+          });
+        }
+
+        // Context / token limit exceeded
+        if (groqRes.status === 413 || groqCode === 'context_length_exceeded' || rawGroqMsg.includes('maximum context length')) {
+          return res.status(413).json({
+            error: 'context_length',
+            message: 'Conversation context length exceeded. Please click "Start New Task" to begin a fresh session.'
+          });
+        }
+
+        // Fallback for other Groq errors
         return res.status(groqRes.status).json({
           error: 'groq_error',
-          details: errBody
+          message: rawGroqMsg || `AI provider returned error HTTP ${groqRes.status}.`
         });
       }
 

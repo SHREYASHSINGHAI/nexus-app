@@ -1458,29 +1458,53 @@ async function sendMessage(overrideText = null) {
     }
   } catch(e) {
     hideTyping();
-    let errMsg = `• Connection error: ${e.message}`;
+    let errMsg = '• Something went wrong while connecting to the AI service.';
+
     try {
-      // Sometimes e.message is double-stringified or wrapped in a server_error
-      let rawMsg = e.message;
-      if (rawMsg.includes('"error":"session_limit"')) {
-        errMsg = `• Free session limit reached.\n• Opening upgrade options...`;
-        setTimeout(openPricingModal, 1500);
-      } else if (rawMsg.includes('"error":"anon_limit_reached"')) {
-        errMsg = `• Anonymous free search limit reached.\n• Please sign in to continue using Nexus.`;
-        setTimeout(openAuthModal, 1500);
-      } else if (rawMsg.includes('"error":"groq_error"')) {
-        errMsg = `• AI Provider Limits Reached. The model is temporarily overloaded.`;
-      } else if (rawMsg.includes('model_decommissioned')) {
-        errMsg = `• The AI model requires an update. Please contact the administrator.`;
-      } else {
-        const parsed = JSON.parse(rawMsg);
-        if (parsed.message) {
-          errMsg = `• Error: ${parsed.message}`;
-        }
+      let errObj = null;
+      const rawText = e?.message || '';
+
+      // Attempt to parse JSON error message
+      if (typeof rawText === 'string') {
+        try {
+          errObj = JSON.parse(rawText);
+          // Handle nested JSON message if double-stringified
+          if (errObj && typeof errObj.message === 'string' && errObj.message.startsWith('{')) {
+            try { errObj = JSON.parse(errObj.message); } catch(_) {}
+          }
+        } catch(_) {}
       }
-    } catch(_) { /* keep the default e.message */ }
+
+      const errCode   = errObj?.error || '';
+      const serverMsg = errObj?.message || '';
+
+      if (errCode === 'session_limit' || rawText.includes('session_limit')) {
+        errMsg = `• <strong>Session Limit Reached</strong>\n• You have reached your weekly free session limit.\n• Opening upgrade options...`;
+        setTimeout(openPricingModal, 1500);
+      } else if (errCode === 'anon_limit_reached' || rawText.includes('anon_limit_reached')) {
+        errMsg = `• <strong>Free Limit Reached</strong>\n• Anonymous search limit reached.\n• Please sign in to continue using NEXUS.`;
+        setTimeout(openAuthModal, 1500);
+      } else if (errCode === 'groq_auth' || rawText.includes('groq_auth')) {
+        errMsg = `• <strong>AI Authentication Error</strong>\n• ${serverMsg || 'GROQ_API_KEY is missing or invalid in Vercel settings.'}`;
+      } else if (errCode === 'groq_model' || rawText.includes('groq_model') || rawText.includes('model_not_found') || rawText.includes('model_decommissioned')) {
+        errMsg = `• <strong>AI Model Unavailable</strong>\n• ${serverMsg || 'The configured AI model is not supported or has been decommissioned.'}`;
+      } else if (errCode === 'context_length' || rawText.includes('context_length')) {
+        errMsg = `• <strong>Session Length Exceeded</strong>\n• ${serverMsg || 'Please click "Start New Task" to begin a fresh conversation.'}`;
+      } else if (errCode === 'rate_limit' || rawText.includes('rate_limit')) {
+        errMsg = `• <strong>High Traffic</strong>\n• NEXUS is experiencing high traffic right now.\n• Please wait 30 seconds and try again.`;
+      } else if (errCode === 'network_error' || rawText.includes('network_error')) {
+        errMsg = `• <strong>Connection Error</strong>\n• ${serverMsg || 'Could not reach the AI service. Please check your internet connection.'}`;
+      } else if (serverMsg) {
+        errMsg = `• <strong>Service Error</strong>\n• ${serverMsg}`;
+      } else if (rawText && !rawText.startsWith('{')) {
+        errMsg = `• <strong>Error</strong>\n• ${rawText}`;
+      }
+    } catch(_) {
+      errMsg = `• Connection error: ${e.message || 'Unknown network error'}`;
+    }
+
     addMessage('ai', errMsg);
-    console.error('Groq error:', e);
+    console.error('[NEXUS ERROR]:', e);
   }
   isThinking = false;
 }
