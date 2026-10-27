@@ -7,15 +7,15 @@
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
   const missingVars = [];
   if (!SUPABASE_URL || !SUPABASE_URL.startsWith('http')) missingVars.push('SUPABASE_URL');
-  if (!SUPABASE_KEY) missingVars.push('SUPABASE_ANON_KEY');
+  if (!SUPABASE_KEY) missingVars.push('SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY');
 
   if (missingVars.length > 0) {
     return res.status(500).json({
@@ -66,11 +66,55 @@ export default async function handler(req, res) {
     if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
 
     try {
-      // Generate a short unique share ID (8 chars)
+      // 1. Check existing session for share_id reuse and ownership
+      const getRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/sessions?id=eq.${sessionId}&select=id,user_id,share_id`,
+        { headers }
+      );
+
+      if (getRes.ok) {
+        const sessions = await getRes.json();
+        if (Array.isArray(sessions) && sessions.length > 0) {
+          const session = sessions[0];
+
+          // If already has a share_id, reuse it immediately (idempotent)
+          if (session.share_id) {
+            return res.status(200).json({ shareId: session.share_id });
+          }
+
+          // If session belongs to an authenticated user, verify caller ownership
+          if (session.user_id) {
+            let callerUserId = null;
+            const authHeader = req.headers['authorization'] || '';
+            if (authHeader.startsWith('Bearer ') && process.env.SUPABASE_ANON_KEY) {
+              const token = authHeader.slice(7).trim();
+              const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+                headers: {
+                  apikey: process.env.SUPABASE_ANON_KEY,
+                  Authorization: `Bearer ${token}`
+                }
+              });
+              if (userRes.ok) {
+                const u = await userRes.json();
+                callerUserId = u?.id || null;
+              }
+            }
+
+            if (!callerUserId || callerUserId !== session.user_id) {
+              return res.status(403).json({
+                error: 'forbidden',
+                message: 'You do not have permission to share this session.'
+              });
+            }
+          }
+        }
+      }
+
+      // 2. Generate a short unique share ID (8 chars)
       const shareId = Math.random().toString(36).slice(2, 6) +
         Math.random().toString(36).slice(2, 6);
 
-      // Patch the session with the share_id
+      // 3. Patch the session with the share_id
       const patchRes = await fetch(
         `${SUPABASE_URL}/rest/v1/sessions?id=eq.${sessionId}`,
         {

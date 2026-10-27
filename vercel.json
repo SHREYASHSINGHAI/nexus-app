@@ -7,7 +7,10 @@
     { "src": "api/create-order.js", "use": "@vercel/node" },
     { "src": "api/verify-payment.js", "use": "@vercel/node" },
     { "src": "api/models.js", "use": "@vercel/node" },
-    { "src": "index.html",    "use": "@vercel/static" }
+    { "src": "index.html",    "use": "@vercel/static" },
+    { "src": "privacy.html",  "use": "@vercel/static" },
+    { "src": "terms.html",    "use": "@vercel/static" },
+    { "src": "refund.html",   "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/chat",   "dest": "/api/chat.js"   },
@@ -16,6 +19,9 @@
     { "src": "/api/share",  "dest": "/api/share.js"  },
     { "src": "/api/create-order", "dest": "/api/create-order.js" },
     { "src": "/api/verify-payment", "dest": "/api/verify-payment.js" },
+    { "src": "/privacy",    "dest": "/privacy.html"  },
+    { "src": "/terms",      "dest": "/terms.html"    },
+    { "src": "/refund",     "dest": "/refund.html"   },
     { "src": "/(.*)",       "dest": "/index.html"    }
   ]
 }

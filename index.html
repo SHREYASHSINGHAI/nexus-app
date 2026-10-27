@@ -80,6 +80,8 @@
   .msg-content { font-size: 0.85rem; line-height: 1.7; color: var(--text); }
   .msg-content.ai-msg   { background: var(--surface); border: 1px solid var(--border); border-radius: 0 12px 12px 12px; padding: 0.9rem 1.1rem; }
   .msg-content.user-msg { background: rgba(124,92,252,0.1); border: 1px solid rgba(124,92,252,0.2); border-radius: 12px 0 12px 12px; padding: 0.9rem 1.1rem; color: var(--highlight); }
+  .stream-cursor { display: inline-block; color: var(--accent2); font-weight: 700; animation: streamBlink 0.8s infinite; margin-left: 2px; }
+  @keyframes streamBlink { 0%,100% { opacity:1; } 50% { opacity:0; } }
 
   /* ── EXAMPLE PROMPTS (welcome screen) ── */
   .example-prompts { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.8rem; }
@@ -381,6 +383,25 @@
       </div>
     </div>
     <div class="auth-error" id="pricingError"></div>
+    <div style="display:flex; justify-content:center; gap:12px; margin-top:16px; font-size:0.7rem; color:var(--muted);">
+      <a href="/terms" target="_blank" style="color:inherit; text-decoration:underline;">Terms</a>
+      <span>·</span>
+      <a href="/privacy" target="_blank" style="color:inherit; text-decoration:underline;">Privacy</a>
+      <span>·</span>
+      <a href="/refund" target="_blank" style="color:inherit; text-decoration:underline;">Refunds</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── SESSION HISTORY MODAL ── -->
+<div class="auth-modal-overlay" id="historyModal" style="display:none;">
+  <div class="auth-modal-box" style="max-width: 540px; max-height: 85vh; display: flex; flex-direction: column;">
+    <button class="auth-modal-close" onclick="closeHistoryModal()">✕</button>
+    <div class="auth-modal-logo">🕒 SESSION HISTORY</div>
+    <div class="auth-modal-subtitle">Browse and reopen your saved recommendations.</div>
+    <div id="historyList" style="overflow-y: auto; max-height: 60vh; display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding-right: 4px;">
+      <div style="text-align: center; color: var(--muted); padding: 2rem 0; font-size: 0.85rem;">Loading past sessions...</div>
+    </div>
   </div>
 </div>
 
@@ -397,6 +418,9 @@
       <div class="dropdown-menu" id="dropdownMenu">
         <button class="dropdown-item" id="plansBtn" onclick="openPricingModal()" style="display:none;">
           <span class="dropdown-icon">⭐</span> Plans
+        </button>
+        <button class="dropdown-item" id="historyBtn" onclick="openHistoryModal()" style="display:none;">
+          <span class="dropdown-icon">🕒</span> Session History
         </button>
         <div class="dropdown-item" id="tierDisplay" style="display:none; font-size: 0.65rem; color: var(--muted); cursor: default; padding-top: 0.2rem; padding-bottom: 0.8rem;">
           Loading plan...
@@ -461,10 +485,23 @@ if (window.FingerprintJS) {
   }).catch(e => console.warn('FingerprintJS failed:', e));
 }
 
+// ── AUTH HEADERS HELPER ──────────────────────────────────────
+async function getAuthHeaders() {
+  if (sb) {
+    try {
+      const { data } = await sb.auth.getSession();
+      const token = data?.session?.access_token;
+      if (token) return { 'Authorization': `Bearer ${token}` };
+    } catch (_) {}
+  }
+  return {};
+}
+
 async function initSupabase() {
   try {
     const res = await fetch('/api/config');
     const cfg = await res.json();
+    window.NEXUS_RAZORPAY_KEY = cfg.razorpayKey;
     sb = createClient(cfg.supabaseUrl, cfg.supabaseAnon);
     const { data } = await sb.auth.getSession();
     currentUser = data?.session?.user || null;
@@ -477,14 +514,16 @@ async function initSupabase() {
 }
 
 function updateAuthUI() {
-  const btn     = document.getElementById('authHeaderBtn');
+  const btn      = document.getElementById('authHeaderBtn');
   const plansBtn = document.getElementById('plansBtn');
+  const historyBtn = document.getElementById('historyBtn');
   const tierEl   = document.getElementById('tierDisplay');
   if (!btn) return;
   if (currentUser) {
     btn.textContent = `● ${(currentUser.email||'').split('@')[0].slice(0,16)}`;
     btn.classList.add('signed-in');
     if (plansBtn) plansBtn.style.display = 'flex';
+    if (historyBtn) historyBtn.style.display = 'flex';
     if (tierEl) {
       tierEl.style.display = 'flex';
       fetchUserPlan();
@@ -493,7 +532,117 @@ function updateAuthUI() {
     btn.textContent = 'Sign In';
     btn.classList.remove('signed-in');
     if (plansBtn) plansBtn.style.display = 'none';
+    if (historyBtn) historyBtn.style.display = 'none';
     if (tierEl) tierEl.style.display = 'none';
+  }
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[s]);
+}
+
+async function openHistoryModal() {
+  const modal = document.getElementById('historyModal');
+  const listEl = document.getElementById('historyList');
+  if (!modal || !listEl) return;
+  modal.style.display = 'flex';
+  listEl.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 2rem 0; font-size: 0.85rem;">Loading past sessions...</div>';
+
+  if (!sb || !currentUser) {
+    listEl.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 2rem 0; font-size: 0.85rem;">Please sign in to view your session history.</div>';
+    return;
+  }
+
+  try {
+    const { data: sessions, error } = await sb
+      .from('sessions')
+      .select('id, domain, pipeline_mode, recommended_tools, created_at, user_tasks(task_description)')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    if (!sessions || sessions.length === 0) {
+      listEl.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 2rem 0; font-size: 0.85rem;">No past sessions found. Start a new task to create one!</div>';
+      return;
+    }
+
+    listEl.innerHTML = sessions.map(s => {
+      const task = (s.user_tasks && s.user_tasks[0]?.task_description) || 'AI Recommendation Session';
+      const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      const tools = Array.isArray(s.recommended_tools) ? s.recommended_tools.slice(0, 3).join(', ') : '';
+      const modeBadge = s.pipeline_mode ? '🔗 Pipeline' : '⚡ Single';
+
+      return `
+        <div style="border:1px solid var(--border); border-radius:10px; padding:12px; background:var(--surface); cursor:pointer; transition:all 0.15s ease;"
+             onmouseover="this.style.borderColor='var(--accent)'"
+             onmouseout="this.style.borderColor='var(--border)'"
+             onclick="loadPastSession('${s.id}')">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+            <div style="font-weight:600; font-size:0.85rem; color:var(--highlight); line-height:1.3; max-width:75%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              ${escapeHtml(task)}
+            </div>
+            <span style="font-size:0.65rem; padding:2px 6px; border-radius:4px; background:rgba(124,92,252,0.15); color:var(--accent); font-weight:600;">
+              ${modeBadge}
+            </span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:var(--muted);">
+            <div>${tools ? 'Tools: ' + escapeHtml(tools) : (s.domain || 'General')}</div>
+            <div>${dateStr}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    listEl.innerHTML = `<div style="text-align:center; color:#ff4d4f; padding:1.5rem 0; font-size:0.8rem;">Could not load history: ${err.message}</div>`;
+  }
+}
+
+function closeHistoryModal() {
+  const modal = document.getElementById('historyModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function loadPastSession(sessionId) {
+  closeHistoryModal();
+  try {
+    document.getElementById('messages').innerHTML = '';
+    addMessage('ai', '• Reopening past session...');
+
+    const { data: session } = await sb.from('sessions').select('*').eq('id', sessionId).single();
+    const { data: msgList } = await sb.from('messages').select('*').eq('session_id', sessionId).order('created_at', { ascending: true });
+
+    document.getElementById('messages').innerHTML = '';
+    if (Array.isArray(msgList) && msgList.length > 0) {
+      msgList.forEach(m => {
+        addMessage(m.role === 'user' ? 'user' : 'ai', m.content);
+      });
+      document.getElementById('chatInputArea').style.display = 'none';
+      document.getElementById('resetInputArea').style.display = 'flex';
+    }
+
+    if (session && session.recommended_tools && Array.isArray(session.recommended_tools)) {
+      const recData = {
+        mode: session.pipeline_mode ? 'pipeline' : 'single',
+        domain: session.domain || 'AI',
+        summary: `Saved recommendation session (${session.domain || 'AI'})`,
+        tools: session.recommended_tools,
+        reasoning: 'Loaded from your saved session history.'
+      };
+      if (session.pipeline_mode) {
+        recData.pipeline = session.recommended_tools.map((t, idx) => ({
+          step: idx + 1,
+          subtask: `Workflow Step ${idx + 1}`,
+          tool: t,
+          fit_score: 92,
+          description: `Execute ${t} for this workflow step.`
+        }));
+      }
+      recData.mode === 'pipeline' ? renderPipeline(recData) : renderSingle(recData);
+    }
+  } catch (err) {
+    alert('Failed to load past session: ' + err.message);
   }
 }
 
@@ -549,8 +698,17 @@ async function startCheckout(plan_id) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
+    // Ensure Razorpay key is ready from cache or config
+    if (!window.NEXUS_RAZORPAY_KEY) {
+      try {
+        const configRes = await fetch('/api/config');
+        const cfg = await configRes.json();
+        window.NEXUS_RAZORPAY_KEY = cfg.razorpayKey;
+      } catch(_) {}
+    }
+
     const options = {
-      key: process.env.RAZORPAY_KEY_ID || '', // Razorpay will use api key from response optionally, we handle this
+      key: window.NEXUS_RAZORPAY_KEY || '',
       amount: data.amount,
       currency: data.currency,
       name: 'NEXUS Premium',
@@ -558,26 +716,24 @@ async function startCheckout(plan_id) {
       order_id: data.id,
       handler: async function (response) {
         errorEl.textContent = 'Verifying payment...';
+        const authHeaders = await getAuthHeaders();
         const vRes = await fetch('/api/verify-payment', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...response, plan_id, user_id: currentUser.id })
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({ ...response, plan_id })
         });
         if (vRes.ok) {
           closePricingModal();
           alert('Subscription activated successfully! Enjoy unlimited workflows.');
+          fetchUserPlan();
         } else {
-          errorEl.textContent = 'Verification failed. Contact support.';
+          const errData = await vRes.json().catch(() => ({}));
+          errorEl.textContent = errData.message || 'Verification failed. Contact support.';
         }
       },
       prefill: { email: currentUser.email },
       theme: { color: '#7c5cfc' }
     };
-    
-    // We fetch Razorpay key from config
-    const configRes = await fetch('/api/config');
-    const cfg = await configRes.json();
-    options.key = cfg.razorpayKey; // ensure you pass razorpay key in /api/config
     
     const rzp = new window.Razorpay(options);
     rzp.open();
@@ -615,9 +771,10 @@ async function shareRecommendation() {
   if (!btn) return;
   btn.textContent = '⏳ Creating link...';
   try {
+    const authHeaders = await getAuthHeaders();
     const res  = await fetch('/api/share', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ sessionId: SESSION_ID })
     });
     const data = await res.json();
@@ -761,7 +918,7 @@ function buildPDFContent() {
   return html || '<p style="color:#999">No recommendation data available.</p>';
 }
 
-// ── AI TOOL DATABASE ──────────────────────────────────────────
+// ── AI TOOL DATABASE (EXPANDED CATALOG) ──────────────────────
 const AI_TOOLS_DB = {
   writing: [
     { name:"Claude (Anthropic)", icon:"🤖", color:"#7c5cfc", tagline:"Advanced reasoning, long-form writing, and nuanced analysis", pricing:"Free / $20/mo Pro", type:"LLM", url:"https://claude.ai", description:"Best for complex writing tasks, document analysis, creative projects, and tasks requiring deep reasoning.", tradeoff:"Context window is generous but free tier has message limits; not ideal for high-volume automated writing.", guide:[{title:"Start a new chat",desc:"Go to <strong>claude.ai</strong> and click New Chat"},{title:"Describe your goal",desc:"Be specific about your task — tone, audience, format, length"},{title:"Iterate",desc:"Ask Claude to refine, expand, or change style as needed"},{title:"Use Projects",desc:"Organize related work using Claude's <strong>Projects</strong> feature"}]},
@@ -770,13 +927,19 @@ const AI_TOOLS_DB = {
     { name:"Notion AI", icon:"📝", color:"#555", tagline:"Embedded writing intelligence inside your workspace", pricing:"$8/mo add-on", type:"Workspace AI", url:"https://notion.so", description:"Seamlessly integrated into Notion for drafting, summarizing, and transforming notes.", tradeoff:"Only useful if you already use Notion; AI quality lags behind dedicated writing tools.", guide:[{title:"Enable Notion AI",desc:"Add the AI add-on in <strong>Settings → Plans</strong>"},{title:"Use Space Bar",desc:"Press Space in any page"},{title:"Summarize pages",desc:"Highlight text and ask AI to summarize"},{title:"Auto-fill databases",desc:"Let AI generate database properties"}]}
   ],
   coding: [
-    { name:"GitHub Copilot", icon:"⚡", color:"#6e40c9", tagline:"Real-time code completion inside your IDE", pricing:"Free (limited) / $10/mo", type:"Code AI", url:"https://github.com/features/copilot", description:"The industry standard for AI code completion. Integrates into VS Code, JetBrains IDEs, Neovim, and more.", tradeoff:"Completions can be confidently wrong; works at file level only.", guide:[{title:"Install Extension",desc:"Search 'GitHub Copilot' in VS Code"},{title:"Authenticate",desc:"Sign in with your <strong>GitHub account</strong>"},{title:"Write Comments",desc:"Type a natural language comment and Copilot suggests code"},{title:"Tab to Accept",desc:"Press <strong>Tab</strong> to accept"}]},
     { name:"Cursor", icon:"🖱️", color:"#2563eb", tagline:"AI-native code editor with full codebase context", pricing:"Free / $20/mo Pro", type:"AI IDE", url:"https://cursor.sh", description:"A fork of VS Code with AI deeply embedded. Can understand and edit across your entire codebase.", tradeoff:"Requires local setup; free tier is limited.", guide:[{title:"Download Cursor",desc:"Install from <strong>cursor.sh</strong>"},{title:"Use Cmd+K",desc:"Highlight code and press Cmd+K to edit with AI"},{title:"Chat with Codebase",desc:"Press Cmd+L for full repo context"},{title:"Composer Mode",desc:"Use Composer for multi-file edits"}]},
+    { name:"v0 by Vercel", icon:"▲", color:"#000000", tagline:"Generative UI system building full web apps from prompts", pricing:"Free / $20/mo Premium", type:"Generative UI", url:"https://v0.dev", description:"Generates clean, production-ready React, Tailwind, and HTML components and web applications directly from natural language prompts.", tradeoff:"Focused on frontend React/Next.js architecture; complex custom backends need external wiring.", guide:[{title:"Visit v0.dev",desc:"Sign in with your <strong>GitHub or Vercel account</strong>"},{title:"Describe your UI",desc:"Type your application screen or component requirements in detail"},{title:"Iterate on elements",desc:"Select any section of the generated preview to refine with AI"},{title:"Export code",desc:"Copy JSX or install directly into your project via <strong>npx v0 add</strong>"}]},
+    { name:"Lovable", icon:"❤️", color:"#ff3366", tagline:"Full-stack web application builder with instant deploy", pricing:"Free tier / $20/mo", type:"Fullstack AI", url:"https://lovable.dev", description:"Builds complete, production-grade web applications with database integrations, auth, and backend logic in seconds.", tradeoff:"Best for modern web SaaS products; less optimized for legacy enterprise tech stacks.", guide:[{title:"Open lovable.dev",desc:"Create a free account"},{title:"Describe your application",desc:"Specify data models, auth requirements, and views"},{title:"Connect Supabase",desc:"One-click database and auth integration"},{title:"Deploy live",desc:"Publish directly to custom domain or subdomain"}]},
+    { name:"Bolt.new", icon:"⚡", color:"#6366f1", tagline:"In-browser full-stack AI development sandbox", pricing:"Free / $20/mo Pro", type:"In-Browser IDE", url:"https://bolt.new", description:"Executes full Node.js, Next.js, and Vite runtimes inside WebContainers directly in your browser without local setup.", tradeoff:"Heavy browser memory usage for massive enterprise repositories.", guide:[{title:"Visit bolt.new",desc:"Open directly in any modern browser"},{title:"Prompt your stack",desc:"Ask Bolt to scaffold full-stack application"},{title:"Live preview",desc:"Inspect running client and server inside the tab"},{title:"Push to GitHub",desc:"Export directly to GitHub repository"}]},
+    { name:"Windsurf", icon:"🌊", color:"#06b6d4", tagline:"Agentic AI code editor with Cascade deep contextual flow", pricing:"Free / $15/mo Pro", type:"AI IDE", url:"https://codeium.com/windsurf", description:"Codeium's agentic IDE featuring Cascade — tracks your terminal, edits, and intent to build multi-file solutions autonomously.", tradeoff:"Newer ecosystem with rapidly evolving extension interfaces.", guide:[{title:"Download Windsurf",desc:"Install from <strong>codeium.com/windsurf</strong>"},{title:"Launch Cascade",desc:"Open Cascade sidebar for agentic workflows"},{title:"Run commands",desc:"Let Windsurf inspect tests and terminal errors"},{title:"Accept diffs",desc:"Review multi-file synchronized diffs"}]},
+    { name:"GitHub Copilot", icon:"⚡", color:"#6e40c9", tagline:"Real-time code completion inside your IDE", pricing:"Free (limited) / $10/mo", type:"Code AI", url:"https://github.com/features/copilot", description:"The industry standard for AI code completion. Integrates into VS Code, JetBrains IDEs, Neovim, and more.", tradeoff:"Completions can be confidently wrong; works at file level only.", guide:[{title:"Install Extension",desc:"Search 'GitHub Copilot' in VS Code"},{title:"Authenticate",desc:"Sign in with your <strong>GitHub account</strong>"},{title:"Write Comments",desc:"Type a natural language comment and Copilot suggests code"},{title:"Tab to Accept",desc:"Press <strong>Tab</strong> to accept"}]},
     { name:"Replit AI", icon:"🔁", color:"#f76c2f", tagline:"Build and deploy full apps from the browser", pricing:"Free / $20/mo Core", type:"Cloud IDE", url:"https://replit.com", description:"Best for quick prototyping and deployment without local setup.", tradeoff:"Performance-limited for large projects; not suitable for proprietary codebases.", guide:[{title:"Create a Repl",desc:"Go to <strong>replit.com</strong>, click Create"},{title:"Ask Ghostwriter",desc:"Press Ctrl+I to open Ghostwriter"},{title:"Describe the app",desc:"Type what you want to build"},{title:"Deploy instantly",desc:"Click Deploy for a shareable URL"}]},
     { name:"Codeium", icon:"🟢", color:"#09b6a2", tagline:"Free AI code completion for every developer", pricing:"Free / $12/mo Teams", type:"Code AI", url:"https://codeium.com", description:"The best truly free Copilot alternative. Works in 70+ languages and 40+ editors.", tradeoff:"Slightly less accurate than Copilot on complex completions.", guide:[{title:"Install extension",desc:"Search 'Codeium' in your editor"},{title:"Create free account",desc:"Sign up at <strong>codeium.com</strong>"},{title:"Start coding",desc:"Completions appear automatically"},{title:"Use chat",desc:"Open Codeium Chat sidebar"}]}
   ],
   image: [
     { name:"Midjourney", icon:"🎨", color:"#2563eb", tagline:"World-class aesthetic image generation", pricing:"From $10/mo", type:"Image AI", url:"https://midjourney.com", description:"The gold standard for artistic image generation. Exceptional for concept art, illustrations, and aesthetic photography.", tradeoff:"No free tier; requires Discord; not ideal for text-heavy images.", guide:[{title:"Join Discord",desc:"Go to <strong>midjourney.com</strong> and click Join the Beta"},{title:"Use /imagine",desc:"Type /imagine followed by your prompt"},{title:"Add parameters",desc:"Append --ar 16:9 for widescreen"},{title:"Upscale & vary",desc:"Click U1-U4 to upscale"}]},
+    { name:"Flux.1", icon:"⚡", color:"#3b82f6", tagline:"State-of-the-art open weights photorealistic visual model", pricing:"Free / API usage", type:"Image Model", url:"https://blackforestlabs.ai", description:"Black Forest Labs' flagship visual synthesis model offering unprecedented photorealism, accurate anatomy, and precise text rendering.", tradeoff:"Requires high VRAM (16GB+) for self-hosting; otherwise used via hosted cloud APIs.", guide:[{title:"Try online",desc:"Use via <strong>fal.ai</strong> or <strong>Replicate</strong>"},{title:"Prompt composition",desc:"Describe lighting, camera focal length, and typography"},{title:"Set aspect ratio",desc:"Configure desired resolution"},{title:"Download generation",desc:"Save raw uncompressed image"}]},
+    { name:"Ideogram", icon:"✒️", color:"#8b5cf6", tagline:"Unmatched typography and graphic design in generated images", pricing:"Free tier / $8/mo", type:"Image AI", url:"https://ideogram.ai", description:"The premier AI for images containing logos, posters, t-shirt graphics, and legible typography.", tradeoff:"Less suited for photorealistic cinematic film grain compared to Midjourney.", guide:[{title:"Sign up",desc:"Visit <strong>ideogram.ai</strong>"},{title:"Include text in quotes",desc:"Type 'A logo with text \"NEXUS\" in neon style'"},{title:"Select style tag",desc:"Choose Graphic Design, Typography, or Photo"},{title:"Export vector/raster",desc:"Download full-resolution output"}]},
     { name:"DALL-E 3 (OpenAI)", icon:"🖼️", color:"#10a37f", tagline:"Text-accurate image generation integrated with ChatGPT", pricing:"Included in ChatGPT Plus", type:"Image AI", url:"https://chat.openai.com", description:"Best for images requiring accurate text rendering and precise prompt following.", tradeoff:"Artistic style is generic compared to Midjourney; limited resolution.", guide:[{title:"Open ChatGPT",desc:"Visit <strong>chat.openai.com</strong> with Plus"},{title:"Describe your image",desc:"Type 'Generate an image of...'"},{title:"Iterate with chat",desc:"Ask ChatGPT to modify naturally"},{title:"Right-click to save",desc:"Download in full resolution"}]},
     { name:"Stable Diffusion (Auto1111)", icon:"⚙️", color:"#8b5cf6", tagline:"Open-source powerhouse with unlimited customization", pricing:"Free (self-hosted)", type:"Open Source", url:"https://github.com/AUTOMATIC1111/stable-diffusion-webui", description:"Runs locally, completely free, with thousands of community models and fine-tuning support.", tradeoff:"Requires a capable GPU and technical setup; steep learning curve.", guide:[{title:"Install Python",desc:"Ensure Python 3.10+ is installed"},{title:"Clone the repo",desc:"Run: git clone the AUTOMATIC1111 repo"},{title:"Run webui.sh",desc:"Execute <strong>./webui.sh</strong> and open localhost:7860"},{title:"Download models",desc:"Get models from Civitai.com"}]},
     { name:"Adobe Firefly", icon:"🔥", color:"#ff4444", tagline:"Commercially safe AI images inside Adobe tools", pricing:"Included in Adobe CC / Free tier", type:"Creative AI", url:"https://firefly.adobe.com", description:"Trained on licensed content, making it commercially safe. Integrates with Photoshop and Illustrator.", tradeoff:"Output quality and creative range lags behind Midjourney.", guide:[{title:"Visit firefly.adobe.com",desc:"Create a free Adobe account"},{title:"Generate images",desc:"Use the <strong>Text to Image</strong> feature"},{title:"Generative Fill",desc:"In Photoshop, select an area and press Generate Fill"},{title:"Style matching",desc:"Upload a reference image to match its style"}]}
@@ -788,10 +951,13 @@ const AI_TOOLS_DB = {
   ],
   voice: [
     { name:"ElevenLabs", icon:"🎙️", color:"#f59e0b", tagline:"Ultra-realistic AI voice cloning and generation", pricing:"Free / From $5/mo", type:"Voice AI", url:"https://elevenlabs.io", description:"Industry-leading voice AI for realistic text-to-speech, voice cloning, and multilingual voiceovers.", tradeoff:"Free tier is limited to 10,000 characters/month.", guide:[{title:"Sign up",desc:"Create account at <strong>elevenlabs.io</strong>"},{title:"Pick a voice",desc:"Browse the Voice Library or design your own"},{title:"Paste your text",desc:"Enter your script in the Speech Synthesis editor"},{title:"Adjust settings",desc:"Tune Stability and Clarity sliders"}]},
+    { name:"Deepgram", icon:"⚡", color:"#10b981", tagline:"Lightning-fast real-time speech transcription and voice synthesis", pricing:"Free credits / $0.0043/min", type:"Voice API", url:"https://deepgram.com", description:"Industry standard for real-time speech-to-text (Nova-2) and text-to-speech with ultra-low latency sub-300ms pipelines.", tradeoff:"Developer-oriented API platform; requires frontend or backend integration.", guide:[{title:"Create account",desc:"Sign up at <strong>deepgram.com</strong>"},{title:"Get API key",desc:"Generate your secret token in console"},{title:"Connect audio",desc:"Send live microphone stream over WebSockets"},{title:"Receive transcripts",desc:"Stream instant word-level timestamps"}]},
     { name:"Suno AI", icon:"🎵", color:"#8b5cf6", tagline:"Generate full songs with vocals from text prompts", pricing:"Free / From $8/mo", type:"Music AI", url:"https://suno.com", description:"Create complete songs with lyrics, melody, and vocals from a simple text description.", tradeoff:"Limited control over exact musical structure; commercial licensing terms contested.", guide:[{title:"Go to suno.com",desc:"Sign in with Google or Discord"},{title:"Describe your song",desc:"Enter a song style description"},{title:"Write lyrics (optional)",desc:"Enable Custom Mode"},{title:"Download & share",desc:"Download the MP3"}]}
   ],
   video: [
     { name:"Runway ML", icon:"🎬", color:"#ec4899", tagline:"Professional AI video generation and editing", pricing:"Free (125 credits) / From $15/mo", type:"Video AI", url:"https://runwayml.com", description:"The professional choice for AI video. Gen-3 text-to-video, image-to-video, and video-to-video transformation.", tradeoff:"Expensive per-credit; free tier is very limited; videos max at 10-16 seconds.", guide:[{title:"Sign up at runwayml.com",desc:"Create account and get 125 free credits"},{title:"Choose Gen-3",desc:"Select the Gen-3 Alpha model"},{title:"Write your prompt",desc:"Describe camera movement and mood"},{title:"Extend clips",desc:"Use Video to Video to extend footage"}]},
+    { name:"Luma Dream Machine", icon:"🌟", color:"#8b5cf6", tagline:"Cinematic photorealistic video with fluid motion physics", pricing:"Free (30 gens) / $29.99/mo", type:"Video AI", url:"https://lumalabs.ai/dream-machine", description:"Generates high-speed 5-second cinematic clips with natural physical interactions, camera pans, and photorealistic lighting.", tradeoff:"High GPU compute queue during peak viral traffic times.", guide:[{title:"Open lumalabs.ai",desc:"Sign in with Google"},{title:"Compose prompt",desc:"Describe camera action and lighting"},{title:"Generate video",desc:"Wait for rendering queue"},{title:"Extend scene",desc:"Use keyframe extension to lengthen video"}]},
+    { name:"Kling AI", icon:"🎞️", color:"#ef4444", tagline:"High-definition video generation with realistic physical motion", pricing:"Free tier / Subscription", type:"Video AI", url:"https://klingai.com", description:"Exceptional 1080p video generation with accurate human motion, complex physical dynamics, and multi-second coherence.", tradeoff:"Cloud generation times can take several minutes per clip.", guide:[{title:"Sign up",desc:"Visit <strong>klingai.com</strong>"},{title:"Choose mode",desc:"Select Text-to-Video or Image-to-Video"},{title:"Set parameters",desc:"Configure camera trajectory and creativity level"},{title:"Render",desc:"Download high-resolution MP4"}]},
     { name:"Sora (OpenAI)", icon:"☀️", color:"#f59e0b", tagline:"Cinematic-quality video from text descriptions", pricing:"Included in ChatGPT Plus/Pro", type:"Video AI", url:"https://sora.com", description:"OpenAI's flagship video model producing strikingly realistic video up to 20 seconds.", tradeoff:"Requires ChatGPT Plus/Pro; limited to 20 seconds; restrictive content policy.", guide:[{title:"Access via ChatGPT",desc:"Visit <strong>sora.com</strong> with Plus"},{title:"Write a detailed prompt",desc:"Include lighting, camera angle, environment"},{title:"Set duration",desc:"Choose 5-20 second clips"},{title:"Remix & storyboard",desc:"Use the Storyboard feature"}]},
     { name:"HeyGen", icon:"🧑‍💼", color:"#2563eb", tagline:"AI avatar video creation for business", pricing:"Free (1 min) / From $24/mo", type:"Avatar AI", url:"https://heygen.com", description:"Create professional-grade videos with AI avatars. Perfect for corporate training and multilingual content.", tradeoff:"Free tier gives only 1 minute; avatar videos can appear uncanny.", guide:[{title:"Sign up at heygen.com",desc:"Create account — free tier includes 1 minute"},{title:"Pick an avatar",desc:"Choose from 100+ realistic AI avatars"},{title:"Write your script",desc:"Type or paste your script"},{title:"Translate & localize",desc:"Dub into 40+ languages with lip-sync"}]}
   ],
@@ -801,10 +967,53 @@ const AI_TOOLS_DB = {
     { name:"Zapier", icon:"⚡", color:"#ff4a00", tagline:"The easiest app-to-app automation for non-developers", pricing:"Free (5 Zaps) / From $19.99/mo", type:"Automation", url:"https://zapier.com", description:"The most user-friendly automation tool. Best for simple trigger-action workflows.", tradeoff:"Expensive for multi-step or high-volume workflows.", guide:[{title:"Go to zapier.com",desc:"Sign up — free plan includes 5 Zaps"},{title:"Click Make a Zap",desc:"Or describe your workflow in natural language"},{title:"Set trigger",desc:"Choose the app and event"},{title:"Add action",desc:"Pick what happens next, test it, and turn it on"}]}
   ],
   data: [
+    { name:"Gamma App", icon:"📑", color:"#ec4899", tagline:"AI presentation, document, and webpage generator", pricing:"Free tier / $10/mo", type:"Presentation AI", url:"https://gamma.app", description:"Generates polished presentation slide decks, interactive documents, and web pages from simple briefs in under 30 seconds.", tradeoff:"Less granular control over individual vector coordinate elements than Figma.", guide:[{title:"Go to gamma.app",desc:"Sign in with Google"},{title:"Choose format",desc:"Pick Presentation, Document, or Webpage"},{title:"Paste outline",desc:"Provide your topic outline or raw notes"},{title:"Select theme",desc:"Pick visual styling and export to PDF/PPTX"}]},
     { name:"Julius AI", icon:"📊", color:"#10b981", tagline:"Conversational data analysis and visualization", pricing:"Free / From $20/mo", type:"Data AI", url:"https://julius.ai", description:"Upload CSVs, Excel files, or databases and analyze them through conversation. Creates charts without writing code.", tradeoff:"Less powerful than writing actual Python; not suited for real-time data.", guide:[{title:"Go to julius.ai",desc:"Sign in and click New Analysis"},{title:"Upload your data",desc:"Drag and drop a CSV, Excel, or connect Google Sheets"},{title:"Ask questions",desc:"Type questions in natural language"},{title:"Generate charts",desc:"Ask for visualizations"}]},
     { name:"ChatGPT Advanced Data Analysis", icon:"🐍", color:"#10a37f", tagline:"Code-executing data analysis inside ChatGPT", pricing:"Included in ChatGPT Plus", type:"Data AI", url:"https://chat.openai.com", description:"Upload files and let GPT-4 write and execute Python to analyze and visualize your data.", tradeoff:"Session-based — code and files don't persist after the chat ends.", guide:[{title:"Use ChatGPT Plus",desc:"Ensure you have a Plus subscription"},{title:"Attach your file",desc:"Click the paperclip icon to upload"},{title:"Ask for analysis",desc:"Summarize this data and show trends"},{title:"Download outputs",desc:"Right-click charts or request code downloads"}]}
   ]
 };
+
+// ── HYBRID RESOLUTION & ALIAS MATCHING ────────────────────────
+function findToolInCatalog(rawName) {
+  if (!rawName) return null;
+  const allTools = Object.values(AI_TOOLS_DB).flat();
+  const clean = rawName.trim().toLowerCase();
+
+  // 1. Exact match
+  const exact = allTools.find(t => t.name.toLowerCase() === clean);
+  if (exact) return exact;
+
+  // 2. High-priority alias mappings
+  const aliases = {
+    'v0': 'v0 by Vercel', 'v0.dev': 'v0 by Vercel', 'vercel v0': 'v0 by Vercel',
+    'lovable': 'Lovable', 'lovable.dev': 'Lovable',
+    'bolt': 'Bolt.new', 'bolt.new': 'Bolt.new', 'stackblitz bolt': 'Bolt.new',
+    'cursor': 'Cursor', 'cursor ai': 'Cursor', 'cursor.sh': 'Cursor',
+    'windsurf': 'Windsurf', 'codeium windsurf': 'Windsurf',
+    'claude': 'Claude (Anthropic)', 'claude 3': 'Claude (Anthropic)', 'claude 3.5': 'Claude (Anthropic)', 'claude 3.7': 'Claude (Anthropic)', 'anthropic claude': 'Claude (Anthropic)',
+    'chatgpt': 'ChatGPT (OpenAI)', 'gpt-4o': 'ChatGPT (OpenAI)', 'gpt-4': 'ChatGPT (OpenAI)', 'openai chatgpt': 'ChatGPT (OpenAI)',
+    'midjourney': 'Midjourney', 'midjourney v6': 'Midjourney',
+    'flux': 'Flux.1', 'flux.1': 'Flux.1', 'black forest labs': 'Flux.1',
+    'ideogram': 'Ideogram', 'ideogram ai': 'Ideogram',
+    'luma': 'Luma Dream Machine', 'dream machine': 'Luma Dream Machine',
+    'kling': 'Kling AI', 'kling ai': 'Kling AI',
+    'gamma': 'Gamma App', 'gamma.app': 'Gamma App',
+    'deepgram': 'Deepgram', 'deepgram nova': 'Deepgram',
+    'dall-e': 'DALL-E 3 (OpenAI)', 'dalle': 'DALL-E 3 (OpenAI)',
+    'perplexity': 'Perplexity AI', 'copilot': 'GitHub Copilot', 'github copilot': 'GitHub Copilot',
+    'elevenlabs': 'ElevenLabs', 'runway': 'Runway ML', 'suno': 'Suno AI'
+  };
+
+  for (const [alias, target] of Object.entries(aliases)) {
+    if (clean === alias || clean.startsWith(alias + ' ') || clean.endsWith(' ' + alias)) {
+      const match = allTools.find(t => t.name.toLowerCase() === target.toLowerCase());
+      if (match) return match;
+    }
+  }
+
+  // 3. Substring match
+  return allTools.find(t => t.name.toLowerCase().includes(clean) || clean.includes(t.name.toLowerCase().split(' ')[0])) || null;
+}
 
 // ── SYSTEM PROMPT ─────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are NEXUS, a strictly neutral AI Tool Intelligence System. You match users with best-fit AI tools and generate precise, optimised prompts for each tool based on the user's exact task and context.
@@ -1001,24 +1210,37 @@ let isFirstMessage = true, firstTaskDescription = '';
 let lastRecommendationData = null; // for PDF export
 let currentAIModel = 'llama-3.3-70b-versatile';
 
-// ── GROQ API CALL ─────────────────────────────────────────────
-async function callGroq(userMessage) {
+// ── GROQ API CALL (SSE Streaming + Native JSON Mode) ──────────
+async function callGroq(userMessage, { isFinalTurn = false, onToken = null } = {}) {
   messages.push({ role: 'user', content: userMessage });
   if (isFirstMessage) firstTaskDescription = userMessage;
+
+  const shouldStream = !isFinalTurn && typeof onToken === 'function';
+
   try {
+    const authHeaders = await getAuthHeaders();
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({
         model: currentAIModel,
         messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-        max_tokens: 1200, temperature: 0.7, top_p: 0.9,
-        sessionId: SESSION_ID, taskDescription: firstTaskDescription,
-        meta: { isFirstMessage, domain: null, budget: null, skillLevel: null,
-                userId: currentUser?.id || null, userEmail: currentUser?.email || null,
-                anonId, fingerprint: visitorId }
+        max_tokens: isFinalTurn ? 2500 : 1200,
+        temperature: isFinalTurn ? 0.25 : 0.7,
+        top_p: 0.9,
+        sessionId: SESSION_ID,
+        taskDescription: firstTaskDescription,
+        isFinalTurn,
+        stream: shouldStream,
+        meta: {
+          isFirstMessage,
+          domain: null, budget: null, skillLevel: null,
+          userId: currentUser?.id || null, userEmail: currentUser?.email || null,
+          anonId, fingerprint: visitorId
+        }
       })
     });
+
     if (!response.ok) {
       const errText = await response.text();
       try {
@@ -1028,9 +1250,42 @@ async function callGroq(userMessage) {
         throw new Error(JSON.stringify({ error: 'server_error', message: errText.slice(0, 300) }));
       }
     }
+
     isFirstMessage = false;
+
+    // Handle streaming response on conversational turns
+    if (shouldStream && response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
+            try {
+              const json = JSON.parse(trimmed.slice(6));
+              const delta = json.choices?.[0]?.delta?.content;
+              if (delta) {
+                accumulated += delta;
+                onToken(accumulated);
+              }
+            } catch (_) {}
+          }
+        }
+      }
+
+      messages.push({ role: 'assistant', content: accumulated });
+      return accumulated;
+    }
+
+    // Direct JSON response on final turn
     const data  = await response.json();
-    const reply = data.choices[0].message.content;
+    const reply = data.choices?.[0]?.message?.content || '';
     messages.push({ role: 'assistant', content: reply });
     return reply;
   } catch (error) {
@@ -1038,6 +1293,21 @@ async function callGroq(userMessage) {
     if (messages.length === 0) firstTaskDescription = '';
     throw error;
   }
+}
+
+function createStreamMessage() {
+  const el = document.createElement('div');
+  el.className = 'message';
+  el.innerHTML = `
+    <div class="msg-avatar ai">NX</div>
+    <div class="msg-bubble">
+      <div class="msg-sender">NEXUS</div>
+      <div class="msg-content ai-msg"><span class="streaming-content"></span><span class="stream-cursor">▍</span></div>
+    </div>`;
+  const msgs = document.getElementById('messages');
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
 }
 
 // ── UI HELPERS ────────────────────────────────────────────────
@@ -1110,18 +1380,46 @@ function parseOptions(reply) {
   try { return JSON.parse(m[1].trim()); } catch(e) { return null; }
 }
 function stripMarkers(reply) {
-  return reply.replace(/\|\|\|OPTIONS_START[\s\S]*?\|\|\|OPTIONS_END/g,'').replace(/\|\|\|JSON_START[\s\S]*?\|\|\|JSON_END/g,'').trim();
+  let text = (reply || '')
+    .replace(/\|\|\|OPTIONS_START[\s\S]*?\|\|\|OPTIONS_END/g,'')
+    .replace(/\|\|\|JSON_START[\s\S]*?\|\|\|JSON_END/g,'')
+    .trim();
+  if (text.startsWith('{') && text.endsWith('}')) return '';
+  return text;
 }
+
 function parseAndRenderTools(reply) {
-  const m = reply.match(/\|\|\|JSON_START\s*([\s\S]*?)\s*\|\|\|JSON_END/);
-  if (!m) return null;
-  try {
-    const data = JSON.parse(m[1]);
-    lastRecommendationData = data; // save for PDF export
-    data.mode === 'pipeline' ? renderPipeline(data) : renderSingle(data);
-    if (!currentUser) setTimeout(appendLoginBanner, 800);
-    return stripMarkers(reply);
-  } catch(e) { return null; }
+  let data = null;
+  const trimmed = (reply || '').trim();
+
+  // 1. Native JSON Mode (Direct JSON object from Groq)
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try { data = JSON.parse(trimmed); } catch(e) {}
+  }
+
+  // 2. Delimiter extraction fallback (|||JSON_START ... |||JSON_END)
+  if (!data) {
+    const m = reply.match(/\|\|\|JSON_START\s*([\s\S]*?)\s*\|\|\|JSON_END/);
+    if (m) {
+      try { data = JSON.parse(m[1].trim()); } catch(e) {}
+    }
+  }
+
+  // 3. Substring JSON search fallback
+  if (!data && reply.includes('{') && reply.includes('}')) {
+    try {
+      const start = reply.indexOf('{');
+      const end = reply.lastIndexOf('}');
+      data = JSON.parse(reply.slice(start, end + 1));
+    } catch(e) {}
+  }
+
+  if (!data || (!data.tools && !data.pipeline)) return null;
+
+  lastRecommendationData = data; // save for PDF export
+  data.mode === 'pipeline' ? renderPipeline(data) : renderSingle(data);
+  if (!currentUser) setTimeout(appendLoginBanner, 800);
+  return stripMarkers(reply);
 }
 
 // ── RENDER — Single ───────────────────────────────────────────
@@ -1143,10 +1441,9 @@ function renderSingle(data) {
 
   const promptMap = {};
   (data.tool_prompts||[]).forEach(tp => { promptMap[tp.tool] = tp.prompts||[]; });
-  const allTools = Object.values(AI_TOOLS_DB).flat();
-  data.tools.forEach((name, i) => {
-    const tool  = allTools.find(t => t.name === name);
-    const score = data.scores[i] || (90 - i * 8);
+  (data.tools || []).forEach((name, i) => {
+    const tool  = findToolInCatalog(name);
+    const score = (data.scores && data.scores[i]) || (92 - i * 8);
     const card  = tool
       ? createToolCard(tool, score, i===0, promptMap[name]||null)
       : createFallbackCard(name, score, i===0, promptMap[name]||null);
@@ -1156,14 +1453,10 @@ function renderSingle(data) {
 
   const note = makeEl('div', '');
   note.style.cssText = 'padding:1rem;font-size:0.7rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);margin-top:0.5rem;';
-  note.textContent = `✦ ${data.reasoning}`;
+  note.textContent = `✦ ${data.reasoning || 'Tools ranked by requirement-fit only.'}`;
   panel.appendChild(note);
 
   if (data.action_steps?.length) {
-    // In single mode, prompts already appear inside each tool card above.
-    // Passing them to buildActionSteps caused every action step to repeat
-    // the same tool's prompts. Pass an empty map — action steps show
-    // the action text, tool badge, and duration only.
     panel.appendChild(buildActionSteps(data.action_steps, {}));
   }
 }
@@ -1190,7 +1483,7 @@ function renderPipeline(data) {
   panel.appendChild(nb);
   const container = makeEl('div', 'pipeline-container');
   data.pipeline.forEach((step, idx) => {
-    const tool  = allTools.find(t => t.name === step.tool);
+    const tool  = findToolInCatalog(step.tool);
     const sc    = step.fit_score >= 80 ? '#00d4aa' : step.fit_score >= 60 ? '#f59e0b' : '#ff6b6b';
     const icon  = tool?.icon  || '🔧';
     const color = tool?.color || '#7c5cfc';
@@ -1397,7 +1690,7 @@ function fallbackCopy(text) {
   document.execCommand('copy'); document.body.removeChild(ta);
 }
 
-// ── SEND MESSAGE ──────────────────────────────────────────────
+// ── SEND MESSAGE (Streaming + Speculative Prefetch + Native JSON) ─
 async function sendMessage(overrideText = null) {
   if (isThinking) return;
 
@@ -1410,54 +1703,88 @@ async function sendMessage(overrideText = null) {
   }
   
   document.querySelectorAll('.option-btn, .q-opt-btn, .auth-submit-btn').forEach(b => { 
-    if(b.closest('#resetInputArea')) return; // keep reset active
-    b.disabled=true; b.style.opacity='0.5'; 
+    if (b.closest('#resetInputArea')) return; // keep reset active
+    b.disabled = true; b.style.opacity = '0.5'; 
   });
 
   addMessage('user', text);
   isThinking = true;
-  showTyping();
+
+  // Determine if this turn produces final recommendations
+  const userCount   = messages.filter(m => m.role === 'user').length + 1; // +1 for current message
+  const lastUserMsg = text.toLowerCase().trim();
+  const isConfirmNo = lastUserMsg.includes('no') ||
+                      lastUserMsg.includes('generate') ||
+                      lastUserMsg.includes('proceed') ||
+                      lastUserMsg.includes('yes, i want');
+  const isFinalTurn = userCount >= 4 || (userCount >= 3 && isConfirmNo);
+
+  // Speculative prefetch for Tavily live search on Turn 2 or Turn 3
+  if (userCount >= 2 && !isFinalTurn && firstTaskDescription) {
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'prefetch_search',
+        sessionId: SESSION_ID,
+        taskDescription: firstTaskDescription,
+        meta: { userId: currentUser?.id || null }
+      })
+    }).catch(() => {});
+  }
+
+  let streamMsgEl = null;
 
   try {
-    let reply = await callGroq(text);
-    hideTyping();
+    let reply = '';
 
-    // Detect if JSON was expected but missing.
-    // JSON is expected when user is past the confirmation turn:
-    //   (a) 4+ user messages means we are definitely past confirmation, OR
-    //   (b) 3+ messages AND user just confirmed "no / generate / proceed"
-    const userCount   = messages.filter(m => m.role === 'user').length;
-    const hasJSON     = reply.includes('|||JSON_START');
-    const lastUserMsg = text.toLowerCase().trim();
-    const isConfirmNo = lastUserMsg.includes('no') ||
-                        lastUserMsg.includes('generate') ||
-                        lastUserMsg.includes('proceed') ||
-                        lastUserMsg.includes('yes, i want');
-    const isFinalTurn = userCount >= 4 || (userCount >= 3 && isConfirmNo);
+    if (!isFinalTurn) {
+      // Stream tokens dynamically for conversational turns (< 300ms feedback)
+      streamMsgEl = createStreamMessage();
+      const contentEl = streamMsgEl.querySelector('.streaming-content');
 
-    if (isFinalTurn && !hasJSON) {
-      // Llama gave prose instead of JSON — force it with a direct retry message
-      showTyping();
-      addMessage('ai', '• Generating structured recommendations...');
-      const retryReply = await callGroq(
-        'Output the final recommendations NOW using ONLY the |||JSON_START ... |||JSON_END format. ' +
-        'Do not write any text outside the JSON block. ' +
-        'Use all requirements gathered so far.'
-      );
-      hideTyping();
-      reply = retryReply;
-    }
+      reply = await callGroq(text, {
+        isFinalTurn: false,
+        onToken: (accumulated) => {
+          if (contentEl) {
+            contentEl.innerHTML = formatBullets(stripMarkers(accumulated));
+            const msgs = document.getElementById('messages');
+            msgs.scrollTop = msgs.scrollHeight;
+          }
+        }
+      });
 
-    const toolResult = parseAndRenderTools(reply);
-    if (toolResult !== null) {
-      addMessage('ai', toolResult || '• Analysis complete. Recommendations loaded →');
-      document.getElementById('chatInputArea').style.display = 'none';
-      document.getElementById('resetInputArea').style.display = 'flex';
+      // Remove blinking cursor and append interactive options
+      const cursor = streamMsgEl.querySelector('.stream-cursor');
+      if (cursor) cursor.remove();
+
+      const options = parseOptions(reply);
+      if (options) {
+        const uid = Date.now() + Math.random();
+        const bubble = streamMsgEl.querySelector('.msg-bubble');
+        if (bubble) bubble.insertAdjacentHTML('beforeend', buildOptionsHTML(options, uid));
+      }
     } else {
-      addMessage('ai', stripMarkers(reply), parseOptions(reply));
+      // Final Recommendation Turn: Direct Native JSON mode
+      showTyping();
+      reply = await callGroq(text, { isFinalTurn: true });
+      hideTyping();
+
+      const toolResult = parseAndRenderTools(reply);
+      if (toolResult !== null) {
+        addMessage('ai', '• Recommendations loaded! Tailored tools and execution plan ready in the intelligence panel →');
+        document.getElementById('chatInputArea').style.display = 'none';
+        document.getElementById('resetInputArea').style.display = 'flex';
+      } else {
+        addMessage('ai', stripMarkers(reply), parseOptions(reply));
+      }
     }
   } catch(e) {
     hideTyping();
+    if (streamMsgEl) {
+      const cursor = streamMsgEl.querySelector('.stream-cursor');
+      if (cursor) cursor.remove();
+    }
     let errMsg = '• Something went wrong while connecting to the AI service.';
 
     try {
@@ -1587,9 +1914,73 @@ function toggleTheme() {
   }
 })();
 
+// ── HYDRATE SHARED SESSION ROUTER ───────────────────────────
+async function checkAndLoadSharedSession() {
+  const path = window.location.pathname;
+  let shareId = null;
+  if (path.startsWith('/r/')) {
+    shareId = path.split('/r/')[1].replace(/\/$/, '');
+  } else {
+    const params = new URLSearchParams(window.location.search);
+    shareId = params.get('r');
+  }
+
+  if (!shareId) return false;
+
+  try {
+    document.getElementById('messages').innerHTML = '';
+    addMessage('ai', '• Loading shared recommendation...');
+    const res = await fetch(`/api/share?id=${encodeURIComponent(shareId)}`);
+    if (!res.ok) {
+      document.getElementById('messages').innerHTML = '';
+      addMessage('ai', '• Could not find this shared recommendation link.');
+      return false;
+    }
+    const { session, messages: sharedMsgs } = await res.json();
+    if (!session) return false;
+
+    // Load message history into chat UI
+    document.getElementById('messages').innerHTML = '';
+    if (Array.isArray(sharedMsgs) && sharedMsgs.length > 0) {
+      sharedMsgs.forEach(m => {
+        addMessage(m.role === 'user' ? 'user' : 'ai', m.content);
+      });
+      document.getElementById('chatInputArea').style.display = 'none';
+      document.getElementById('resetInputArea').style.display = 'flex';
+    }
+
+    // Render recommendation panel
+    if (session.recommended_tools && Array.isArray(session.recommended_tools)) {
+      const recData = {
+        mode: session.pipeline_mode ? 'pipeline' : 'single',
+        domain: session.domain || 'AI',
+        summary: `Shared recommendation session (${session.domain || 'AI'})`,
+        tools: session.recommended_tools,
+        reasoning: 'Loaded from verified shared recommendation.'
+      };
+      if (session.pipeline_mode) {
+        recData.pipeline = session.recommended_tools.map((t, idx) => ({
+          step: idx + 1,
+          subtask: `Workflow Step ${idx + 1}`,
+          tool: t,
+          fit_score: 92,
+          description: `Execute ${t} for this workflow step.`
+        }));
+      }
+      recData.mode === 'pipeline' ? renderPipeline(recData) : renderSingle(recData);
+    }
+    return true;
+  } catch (err) {
+    console.warn('[SHARE] Failed to load share:', err.message);
+    return false;
+  }
+}
+
 // ── INIT ──────────────────────────────────────────────────────
 initSupabase();
-addWelcomeMessage();
+checkAndLoadSharedSession().then(isShared => {
+  if (!isShared) addWelcomeMessage();
+});
 </script>
 </body>
 </html>

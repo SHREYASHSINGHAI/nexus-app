@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — NEXUS AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0e12;
+      --surface: #14161f;
+      --border: #222636;
+      --accent: #7c5cfc;
+      --highlight: #ffffff;
+      --muted: #8b92a5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: #d1d5db;
+      font-family: 'Inter', -apple-system, sans-serif;
+      line-height: 1.7;
+      padding: 2rem 1.5rem;
+    }
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    }
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .brand {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--highlight);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      margin-bottom: 0.75rem;
+    }
+    .brand-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 2rem;
+      color: var(--highlight);
+      margin-bottom: 0.5rem;
+    }
+    .last-updated {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.25rem;
+      color: var(--highlight);
+      margin-top: 2rem;
+      margin-bottom: 0.75rem;
+    }
+    p { margin-bottom: 1rem; }
+    ul { margin: 0.5rem 0 1rem 1.5rem; }
+    li { margin-bottom: 0.4rem; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .back-btn {
+      display: inline-block;
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="/" class="brand"><div class="brand-dot"></div>NEXUS</a>
+      <h1>Privacy Policy</h1>
+      <div class="last-updated">Last Updated: October 2026</div>
+    </div>
+
+    <h2>1. Introduction</h2>
+    <p>NEXUS ("we", "our", or "us") provides an AI-powered tool discovery and workflow intelligence system. This Privacy Policy describes how we collect, store, and process your information when you access or use our web platform.</p>
+
+    <h2>2. Information We Collect</h2>
+    <ul>
+      <li><strong>Account Information:</strong> When you sign in using Google OAuth, we collect your name, email address, and profile photo identifier as authorized by your Google account.</li>
+      <li><strong>Session & Task Input:</strong> We process your user query messages, stated budgets, skill levels, and tool recommendations to provide the service and populate your session history.</li>
+      <li><strong>Anonymous Usage Identifiers:</strong> For non-logged-in users, we use browser fingerprinting and randomized client tokens to track weekly search quotas.</li>
+      <li><strong>Payment Details:</strong> Payment transactions are handled directly by Razorpay. We do not store full credit card numbers or banking passwords on our servers. We only retain payment IDs, order IDs, and subscription status.</li>
+    </ul>
+
+    <h2>3. How We Use Your Data</h2>
+    <ul>
+      <li>To generate tailored AI tool recommendations and multi-step workflow pipelines.</li>
+      <li>To maintain your session history and permit shareable recommendation links.</li>
+      <li>To manage and verify subscription limits and prevent fraudulent transactions.</li>
+      <li>To improve recommendation accuracy and system resilience.</li>
+    </ul>
+
+    <h2>4. Sub-processors & Third-Party Services</h2>
+    <p>We work with trusted third-party providers who adhere to strict security and privacy standards:</p>
+    <ul>
+      <li><strong>Supabase:</strong> Authentication and encrypted database hosting.</li>
+      <li><strong>Groq Inc.:</strong> Inference and large language model computation (Llama 3.3).</li>
+      <li><strong>Tavily Search:</strong> Real-time web retrieval for current AI tool metadata.</li>
+      <li><strong>Razorpay:</strong> Secure payment gateway and merchant settlement.</li>
+      <li><strong>Vercel:</strong> Cloud infrastructure and serverless execution.</li>
+    </ul>
+
+    <h2>5. Data Retention & Deletion</h2>
+    <p>You may request full deletion of your account and associated session histories at any time by contacting our support team at <a href="mailto:support@nexus.ai">support@nexus.ai</a>. We process verified deletion requests within 30 days.</p>
+
+    <h2>6. Security</h2>
+    <p>We implement Row Level Security (RLS) on all database tables, HTTPS encryption in transit, and cryptographic HMAC payment validation to protect your personal information.</p>
+
+    <h2>7. Contact</h2>
+    <p>If you have any questions regarding this Privacy Policy, please email <a href="mailto:support@nexus.ai">support@nexus.ai</a>.</p>
+
+    <a href="/" class="back-btn">← Back to NEXUS</a>
+  </div>
+</body>
+</html>

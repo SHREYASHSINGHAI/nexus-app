@@ -17,12 +17,22 @@
 //   SUPABASE_ANON_KEY — publishable key from Supabase → Settings → API
 // ============================================================
 
+// Server-side cache for speculative search results (keyed by sessionId)
+const searchCache = new Map();
+
+function cleanSearchCache() {
+  const now = Date.now();
+  for (const [k, v] of searchCache.entries()) {
+    if (now - v.timestamp > 30 * 60 * 1000) searchCache.delete(k);
+  }
+}
+
 export default async function handler(req, res) {
 
   // ── CORS ─────────────────────────────────────────────────
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') {
@@ -38,22 +48,72 @@ export default async function handler(req, res) {
     top_p,
     sessionId,
     taskDescription,
-    meta
+    meta,
+    isFinalTurn: clientIsFinalTurn,
+    action,
+    stream: clientStream
   } = req.body;
+
+  // ── Speculative pre-fetch action ─────────────────────────
+  if (action === 'prefetch_search') {
+    if (sessionId && taskDescription && process.env.TAVILY_API_KEY) {
+      cleanSearchCache();
+      searchAITools(taskDescription, meta)
+        .then(ctx => {
+          if (ctx) {
+            searchCache.set(sessionId, { context: ctx, timestamp: Date.now() });
+            console.log(`[PREFETCH] Cached live search context for session: ${sessionId} (${ctx.length} chars)`);
+          }
+        })
+        .catch(err => console.warn('[PREFETCH] search failed:', err.message));
+    }
+    return res.status(200).json({ status: 'prefetch_initiated' });
+  }
 
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'messages array is required' });
   }
 
-  // ── Verify session limits ────────
-  const userId = meta?.userId;
+  // ── Authenticate User from Supabase JWT ───────────────────
+  let userId = null;
+  let userEmail = null;
+
+  const authHeader = req.headers['authorization'] || '';
+  if (authHeader.startsWith('Bearer ') && process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+    const token = authHeader.slice(7).trim();
+    try {
+      const userRes = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+        headers: {
+          apikey: process.env.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (userRes.ok) {
+        const u = await userRes.json();
+        userId = u?.id || null;
+        userEmail = u?.email || null;
+      }
+    } catch (e) {
+      console.warn('[AUTH] Token verification error:', e.message);
+    }
+  }
+
+  // Secure Database Credentials (Service Role Key preferred)
+  const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const adminHeaders = {
+    apikey: adminKey,
+    Authorization: `Bearer ${adminKey}`,
+    'Content-Type': 'application/json'
+  };
+
+  // ── Verify session limits & enforce quotas ────────────────
   let sub;
 
   // OPTIMIZATION: Only hit Supabase on the FIRST message (turn 1).
   if (meta?.isFirstMessage) {
     try {
-      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-        console.warn('[SUPABASE] Missing Supabase environment variables, skipping quota verification.');
+      if (!process.env.SUPABASE_URL || !adminKey) {
+        console.warn('[SUPABASE] Missing Supabase credentials, skipping quota verification.');
       } else if (!userId) {
         // ── ANONYMOUS LOGIC ──────────────────────────────────────
         const ipAddress = req.headers['x-forwarded-for'] || '0.0.0.0';
@@ -61,9 +121,7 @@ export default async function handler(req, res) {
         const fp = meta?.fingerprint || 'unknown';
 
         const checkUrl = `${process.env.SUPABASE_URL}/rest/v1/anon_usage?or=(anon_id.eq.${anonId},fingerprint.eq.${fp},ip_address.eq.${ipAddress})&select=*`;
-        const resData = await fetch(checkUrl, {
-          headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` }
-        });
+        const resData = await fetch(checkUrl, { headers: adminHeaders });
 
         if (resData.ok) {
           const records = await resData.json();
@@ -71,13 +129,13 @@ export default async function handler(req, res) {
           if (myRecord) {
             await fetch(`${process.env.SUPABASE_URL}/rest/v1/anon_usage?anon_id=eq.${anonId}`, {
               method: 'PATCH',
-              headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+              headers: adminHeaders,
               body: JSON.stringify({ search_count: myRecord.search_count + 1 })
             });
           } else {
             await fetch(`${process.env.SUPABASE_URL}/rest/v1/anon_usage`, {
               method: 'POST',
-              headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+              headers: adminHeaders,
               body: JSON.stringify({ anon_id: anonId, fingerprint: fp, ip_address: ipAddress, search_count: 1 })
             });
           }
@@ -86,7 +144,7 @@ export default async function handler(req, res) {
         // ── REGISTERED LOGIC ─────────────────────────────────────
         const subRes = await fetch(
           `${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}&select=*`,
-          { headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}` } }
+          { headers: adminHeaders }
         );
         if (subRes.ok) {
           const subData = await subRes.json();
@@ -107,7 +165,7 @@ export default async function handler(req, res) {
             };
             await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions`, {
               method: 'POST',
-              headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+              headers: adminHeaders,
               body: JSON.stringify(sub)
             });
           }
@@ -119,7 +177,7 @@ export default async function handler(req, res) {
             sub.week_reset_date = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
             await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
               method: 'PATCH',
-              headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+              headers: adminHeaders,
               body: JSON.stringify({ sessions_used: 0, week_reset_date: sub.week_reset_date })
             });
           }
@@ -130,7 +188,7 @@ export default async function handler(req, res) {
             sub.quota = 3;
             await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
               method: 'PATCH',
-              headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+              headers: adminHeaders,
               body: JSON.stringify({ plan_id: 'free', quota: 3 })
             });
           }
@@ -146,7 +204,7 @@ export default async function handler(req, res) {
           // SUCCESS: Increment the counter so they consume 1 credit for this task
           await fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
             method: 'PATCH',
-            headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+            headers: adminHeaders,
             body: JSON.stringify({ sessions_used: sub.sessions_used + 1 })
           });
         }
@@ -158,42 +216,50 @@ export default async function handler(req, res) {
 
   // ── Detect if this is the final recommendation turn ──────
   const userMessages = messages.filter(m => m.role === 'user');
-  const isFinalTurn = userMessages.length >= 2;
+  const isFinalTurn = typeof clientIsFinalTurn === 'boolean'
+    ? clientIsFinalTurn
+    : (userMessages.length >= 4);
 
-  // ── Step 1: Tavily search on turn 4 ──────────────────────
+  // ── Step 1: Tavily search (with speculative cache check) ──
   let searchContext = '';
-  if (isFinalTurn && process.env.TAVILY_API_KEY) {
-    try {
-      searchContext = await searchAITools(taskDescription, meta);
-      console.log('Tavily search completed — context length:', searchContext.length);
-    } catch (err) {
-      // Tavily failure is non-fatal — proceed without live data
-      console.warn('Tavily search failed — proceeding without:', err.message);
+  if (isFinalTurn) {
+    if (sessionId && searchCache.has(sessionId)) {
+      searchContext = searchCache.get(sessionId).context;
+      searchCache.delete(sessionId);
+      console.log(`[TAVILY] Used prefetched search cache for session ${sessionId} (${searchContext.length} chars)`);
+    } else if (process.env.TAVILY_API_KEY) {
+      try {
+        searchContext = await searchAITools(taskDescription, meta);
+        console.log('[TAVILY] Live search completed — context length:', searchContext.length);
+      } catch (err) {
+        console.warn('Tavily search failed — proceeding without:', err.message);
+      }
     }
   }
 
   // ── Step 2: Build enriched messages for Groq ─────────────
   let enrichedMessages = [...messages];
 
-  if (searchContext && isFinalTurn) {
+  if (isFinalTurn) {
     enrichedMessages = messages.map(m => {
       if (m.role === 'system') {
-        return {
-          ...m,
-          content: m.content + `\n\n` +
+        let content = m.content;
+        if (searchContext) {
+          content += `\n\n` +
             `════════════════════════════════════════\n` +
             `LIVE AI TOOL DATA FROM theresanaiforthat.com\n` +
             `(Use this current data to supplement your recommendations)\n` +
             `════════════════════════════════════════\n` +
             searchContext +
             `\n════════════════════════════════════════\n` +
-            `INSTRUCTION: Prioritise recommending tools from the live data above when they match the user's requirements better than your training data.`
-        };
+            `INSTRUCTION: Prioritise recommending tools from the live data above when they match the user's requirements better than your training data.`;
+        }
+        content += `\n\nCRITICAL: You are generating final recommendations. You MUST return ONLY a valid JSON object matching either single-tool or pipeline mode schema. Output no markdown fences, no text before or after the JSON.`;
+        return { ...m, content };
       }
       return m;
     });
   }
-
 
   // ── Step 3: Call Groq with retry on rate limit ────────────
   if (!process.env.GROQ_API_KEY) {
@@ -207,25 +273,36 @@ export default async function handler(req, res) {
   const requestedModel = process.env.GROQ_MODEL || model || 'llama-3.3-70b-versatile';
   let activeModel = await resolveGroqModel(requestedModel, process.env.GROQ_API_KEY);
 
+  const shouldStream = Boolean(clientStream && !isFinalTurn);
   let groqData;
   let lastError;
 
   // Retry up to 3 times with exponential backoff on 429
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
+      const groqPayload = {
+        model: activeModel,
+        messages: enrichedMessages,
+        max_tokens: max_tokens || (isFinalTurn ? 2500 : 1200),
+        temperature: isFinalTurn ? 0.25 : (temperature || 0.7),
+        top_p: top_p || 0.9
+      };
+
+      // Native JSON mode for final recommendation turn
+      if (isFinalTurn) {
+        groqPayload.response_format = { type: 'json_object' };
+      }
+      if (shouldStream) {
+        groqPayload.stream = true;
+      }
+
       const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
         },
-        body: JSON.stringify({
-          model: activeModel,
-          messages: enrichedMessages,
-          max_tokens: max_tokens || 1200,
-          temperature: temperature || 0.7,
-          top_p: top_p || 0.9
-        })
+        body: JSON.stringify(groqPayload)
       });
 
       // ── Handle rate limiting specifically ─────────────────
@@ -240,7 +317,6 @@ export default async function handler(req, res) {
           await sleep(waitMs);
           continue; // retry
         } else {
-          // All retries exhausted — return a user-friendly message
           return res.status(429).json({
             error: 'rate_limit',
             message: 'NEXUS is experiencing high traffic right now. Please wait 30 seconds and try again.'
@@ -254,7 +330,6 @@ export default async function handler(req, res) {
         console.error(`[GROQ] Error HTTP ${groqRes.status}:`, errBody);
 
         const rawGroqMsg = errBody?.error?.message || errBody?.message || '';
-        const groqType   = errBody?.error?.type || '';
         const groqCode   = errBody?.error?.code || '';
 
         // Authentication failure
@@ -289,7 +364,48 @@ export default async function handler(req, res) {
         });
       }
 
-      // ── Success ───────────────────────────────────────────
+      // ── Handle SSE Streaming ──────────────────────────────
+      if (shouldStream) {
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+
+        let accumulatedContent = '';
+        const reader = groqRes.body.getReader();
+        const decoder = new TextDecoder();
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            res.write(chunk);
+
+            // Accumulate tokens for Supabase analytics
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
+                try {
+                  const json = JSON.parse(trimmed.slice(6));
+                  const delta = json.choices?.[0]?.delta?.content;
+                  if (delta) accumulatedContent += delta;
+                } catch (_) {}
+              }
+            }
+          }
+        } finally {
+          res.end();
+        }
+
+        // Save analytics in background
+        saveAnalytics({ sessionId, taskDescription, meta, messages, replyText: accumulatedContent, verifiedUserId: userId, verifiedUserEmail: userEmail })
+          .catch(err => console.error('Supabase save failed:', err.message));
+        return;
+      }
+
+      // ── Success (Non-Streaming) ───────────────────────────
       groqData = await groqRes.json();
       break; // exit retry loop
 
@@ -316,18 +432,9 @@ export default async function handler(req, res) {
   // ── Step 4: Respond to client immediately ─────────────────
   res.status(200).json(groqData);
 
-  // Increment usage count
-  if (meta?.isFirstMessage && !isFinalTurn && sub) {
-    fetch(`${process.env.SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`, {
-      method: 'PATCH',
-      headers: { apikey: process.env.SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessions_used: sub.sessions_used + 1 })
-    }).catch(e => console.error('Failed to increment session usage:', e));
-  }
-
   // ── Step 5: Save analytics to Supabase (fire and forget) ──
   const replyText = groqData?.choices?.[0]?.message?.content || '';
-  saveAnalytics({ sessionId, taskDescription, meta, messages, replyText })
+  saveAnalytics({ sessionId, taskDescription, meta, messages, replyText, verifiedUserId: userId, verifiedUserEmail: userEmail })
     .catch(err => console.error('Supabase save failed:', err.message));
 }
 
@@ -349,6 +456,7 @@ async function searchAITools(taskDescription, meta) {
   const domain = meta?.domain || '';
   const budget = meta?.budget || '';
   const query = buildSearchQuery(taskDescription, domain, budget);
+  console.log(`[TAVILY] Executing semantic search for query: "${query}"`);
 
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
@@ -398,11 +506,41 @@ async function searchAIToolsFallback(query) {
 }
 
 function buildSearchQuery(taskDescription, domain, budget) {
+  if (!taskDescription) return domain || 'ai tools';
+
+  // Strip conversational noise and boilerplate verbs
+  const cleaned = taskDescription.toLowerCase()
+    .replace(/\b(i want to|i need to|i'd like to|looking for|looking to|can you recommend|help me|suggest me|build a|build an|create a|create an|make a|make an|an ai that can|best tool for|best ai for|tool that can|app that can|how do i|please|software for|platform for|system for)\b/gi, ' ')
+    .replace(/[^a-zA-Z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Remove common stop words to retain high-signal descriptive keywords
+  const stopWords = new Set([
+    'the','and','for','with','about','from','into','using','that','this','these','those',
+    'what','which','who','whom','whose','when','where','why','how','all','any','both',
+    'each','few','more','most','other','some','such','no','nor','not','only','own',
+    'same','so','than','too','very','can','will','just','should','now','tool','tools','ai'
+  ]);
+  
+  const words = cleaned.split(' ')
+    .filter(w => w.length > 2 && !stopWords.has(w));
+  
+  const coreKeywords = words.slice(0, 5).join(' ');
+
   const parts = [];
-  parts.push(taskDescription.slice(0, 120));
-  if (domain && domain !== 'null') parts.push(domain);
-  if (budget && (budget.toLowerCase().includes('free') || budget === 'Free only')) parts.push('free');
-  return parts.join(' ');
+  if (coreKeywords) parts.push(coreKeywords);
+  else parts.push(taskDescription.slice(0, 80));
+
+  if (domain && domain !== 'null' && !coreKeywords.includes(domain.toLowerCase())) {
+    parts.push(domain);
+  }
+
+  if (budget && (budget.toLowerCase().includes('free') || budget === 'Free only')) {
+    parts.push('free');
+  }
+
+  return parts.join(' ').trim();
 }
 
 function formatSearchResults(results, query) {
@@ -414,7 +552,9 @@ function formatSearchResults(results, query) {
   ];
 
   results.forEach((r, i) => {
-    const title = (r.title || 'Unknown Tool').trim();
+    const rawTitle = (r.title || 'Unknown Tool').trim();
+    // Clean "There's An AI For That" branding from tool title
+    const title = rawTitle.replace(/\s*-\s*There's An AI For That.*$/i, '').trim();
     const url = (r.url || '').trim();
     const snippet = (r.content || r.snippet || '').trim().slice(0, 300);
     lines.push(`${i + 1}. ${title}`);
@@ -430,10 +570,10 @@ function formatSearchResults(results, query) {
 // ============================================================
 // SUPABASE ANALYTICS
 // ============================================================
-async function saveAnalytics({ sessionId, taskDescription, meta, messages, replyText }) {
+async function saveAnalytics({ sessionId, taskDescription, meta, messages, replyText, verifiedUserId, verifiedUserEmail }) {
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_KEY || !sessionId) return;
 
@@ -444,8 +584,8 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
     'Prefer': 'return=minimal'
   };
 
-  const userId = meta?.userId || null;
-  const userEmail = meta?.userEmail || null;
+  const userId = verifiedUserId || meta?.userId || null;
+  const userEmail = verifiedUserEmail || meta?.userEmail || null;
 
   if (meta?.isFirstMessage) {
     await dbInsert(SUPABASE_URL, headers, 'sessions', {

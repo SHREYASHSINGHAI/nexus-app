@@ -394,9 +394,13 @@ Quotas and pricing implemented in `api/create-order.js`, `api/verify-payment.js`
 
 ---
 
-## Roadmap
+## Roadmap & Recent Optimizations
 
-- [ ] Streaming responses — show tokens as they arrive instead of waiting for the full reply
+- [x] Streaming responses — real-time Server-Sent Events (SSE) token streaming for conversational turns (<300ms TTFT)
+- [x] Native Structured JSON mode — deterministic schema output via Groq JSON mode, eliminating regex parsing and retry latency
+- [x] Speculative search pre-fetching — pre-warms live Tavily tool search context during conversation turns
+- [x] Semantic query distillation — intent and stop-word filtering to extract high-signal search keywords
+- [x] Hybrid tool catalog — expanded database with modern tools (Lovable, v0, Bolt.new, Windsurf, Flux.1, Kling, Gamma) and alias matching
 - [ ] Tool comparison table — side-by-side view of recommended tools
 - [ ] Feedback buttons — 👍 / 👎 on each recommendation card
 - [ ] Referral system — share links that earn bonus sessions
