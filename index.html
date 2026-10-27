@@ -688,15 +688,25 @@ function closePricingModal() { document.getElementById('pricingModal').style.dis
 
 async function startCheckout(plan_id) {
   const errorEl = document.getElementById('pricingError');
+  errorEl.textContent = '';
+
+  if (!currentUser) {
+    closePricingModal();
+    openAuthModal();
+    document.getElementById('authError').textContent = 'Please sign in with Google before choosing a plan.';
+    return;
+  }
+
   errorEl.textContent = 'Initiating payment...';
   try {
+    const authHeaders = await getAuthHeaders();
     const res = await fetch('/api/create-order', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ plan_id })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    if (!res.ok) throw new Error(data.message || data.error || 'Failed to create order');
 
     // Ensure Razorpay key is ready from cache or config
     if (!window.NEXUS_RAZORPAY_KEY) {

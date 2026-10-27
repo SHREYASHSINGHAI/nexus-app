@@ -1,12 +1,44 @@
 import Razorpay from 'razorpay';
 
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
   try {
     const { plan_id } = req.body; // 'basic', 'pro', 'max'
     if (!['basic', 'pro', 'max'].includes(plan_id)) {
-      return res.status(400).json({ error: 'invalid_plan' });
+      return res.status(400).json({ error: 'invalid_plan', message: 'Invalid subscription plan selected.' });
+    }
+
+    // Require authenticated user session
+    const authHeader = req.headers['authorization'] || '';
+    if (!authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'unauthorized',
+        message: 'You must be signed in to purchase a subscription.'
+      });
+    }
+
+    const token = authHeader.slice(7).trim();
+    const apiKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (process.env.SUPABASE_URL && apiKey) {
+      const userRes = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+        headers: {
+          apikey: apiKey,
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (!userRes.ok) {
+        return res.status(401).json({
+          error: 'unauthorized',
+          message: 'Your session has expired. Please sign in again.'
+        });
+      }
     }
 
     const country = req.headers['x-vercel-ip-country'] || 'US';
@@ -31,7 +63,10 @@ export default async function handler(req, res) {
     const options = {
       amount,
       currency,
-      receipt: `receipt_${Date.now()}`
+      receipt: `rcpt_${Date.now()}`,
+      notes: {
+        plan_id
+      }
     };
 
     const order = await razorpay.orders.create(options);
@@ -42,6 +77,6 @@ export default async function handler(req, res) {
     if (!process.env.RAZORPAY_KEY_ID) {
       return res.status(500).json({ error: 'Razorpay keys missing from environment.' });
     }
-    res.status(500).json({ error: 'Failed to create order' });
+    res.status(500).json({ error: 'Failed to create order', message: error.message });
   }
 }
