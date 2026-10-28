@@ -243,7 +243,11 @@ export default async function handler(req, res) {
   if (isFinalTurn) {
     enrichedMessages = messages.map(m => {
       if (m.role === 'system') {
-        let content = m.content;
+        let content = m.content
+          .replace(/\|\|\|JSON_START\s*/g, '')
+          .replace(/\|\|\|JSON_END/g, '')
+          .replace(/starting with \|\|\|JSON_START and ending with \|\|\|JSON_END/g, 'as a valid JSON object');
+
         if (searchContext) {
           content += `\n\n` +
             `════════════════════════════════════════\n` +
@@ -254,7 +258,7 @@ export default async function handler(req, res) {
             `\n════════════════════════════════════════\n` +
             `INSTRUCTION: Prioritise recommending tools from the live data above when they match the user's requirements better than your training data.`;
         }
-        content += `\n\nCRITICAL: You are generating final recommendations. You MUST return ONLY a valid JSON object matching either single-tool or pipeline mode schema. Output no markdown fences, no text before or after the JSON.`;
+        content += `\n\nCRITICAL MANDATORY INSTRUCTION: You are generating final recommendations. You MUST return ONLY a valid, parseable JSON object beginning with { and ending with }. Do NOT write any markdown fences (no \`\`\`json). Do NOT output any conversational text before or after the JSON.`;
         return { ...m, content };
       }
       return m;
@@ -331,6 +335,35 @@ export default async function handler(req, res) {
 
         const rawGroqMsg = errBody?.error?.message || errBody?.message || '';
         const groqCode   = errBody?.error?.code || '';
+
+        // ── Handle Groq JSON mode validation error (graceful fallback) ──
+        if (isFinalTurn && (rawGroqMsg.includes('Failed to generate JSON') || groqCode === 'json_validate_failed')) {
+          console.warn(`[GROQ] JSON mode grammar error encountered ("${rawGroqMsg}"). Retrying immediately without response_format constraint...`);
+          try {
+            const fallbackPayload = {
+              model: activeModel,
+              messages: enrichedMessages,
+              max_tokens: max_tokens || 2500,
+              temperature: 0.2,
+              top_p: 0.9
+            };
+            const fallbackRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+              },
+              body: JSON.stringify(fallbackPayload)
+            });
+            if (fallbackRes.ok) {
+              groqData = await fallbackRes.json();
+              console.log('[GROQ] Fallback request succeeded without response_format constraint.');
+              break;
+            }
+          } catch (fallbackErr) {
+            console.error('[GROQ] Fallback attempt failed:', fallbackErr.message);
+          }
+        }
 
         // Authentication failure
         if (groqRes.status === 401 || rawGroqMsg.toLowerCase().includes('api key') || groqCode === 'invalid_api_key') {
@@ -631,23 +664,39 @@ async function saveAnalytics({ sessionId, taskDescription, meta, messages, reply
     });
   }
 
-  if (replyText.includes('|||JSON_START')) {
+  // Parse recommended tools from replyText (direct JSON, delimited JSON, or substring JSON)
+  let parsedRec = null;
+  const trimmedReply = (replyText || '').trim();
+  if (trimmedReply.startsWith('{') && trimmedReply.endsWith('}')) {
+    try { parsedRec = JSON.parse(trimmedReply); } catch(_) {}
+  }
+  if (!parsedRec && replyText.includes('|||JSON_START')) {
     try {
       const match = replyText.match(/\|\|\|JSON_START\s*([\s\S]*?)\s*\|\|\|JSON_END/);
-      if (match) {
-        const parsed = JSON.parse(match[1]);
-        const isPipeline = parsed.mode === 'pipeline';
-        const tools = isPipeline
-          ? parsed.pipeline.map(s => s.tool)
-          : (parsed.tools || []);
+      if (match) parsedRec = JSON.parse(match[1]);
+    } catch (_) {}
+  }
+  if (!parsedRec && replyText.includes('{') && replyText.includes('}')) {
+    try {
+      const s = replyText.indexOf('{');
+      const e = replyText.lastIndexOf('}');
+      parsedRec = JSON.parse(replyText.slice(s, e + 1));
+    } catch (_) {}
+  }
 
-        await dbPatch(SUPABASE_URL, headers, 'sessions', sessionId, {
-          recommended_tools: tools,
-          pipeline_mode: isPipeline,
-          total_steps: isPipeline ? parsed.pipeline.length : 1,
-          domain: parsed.domain || null
-        });
-      }
+  if (parsedRec && (parsedRec.tools || parsedRec.pipeline)) {
+    try {
+      const isPipeline = parsedRec.mode === 'pipeline';
+      const tools = isPipeline
+        ? (parsedRec.pipeline || []).map(s => s.tool)
+        : (parsedRec.tools || []);
+
+      await dbPatch(SUPABASE_URL, headers, 'sessions', sessionId, {
+        recommended_tools: tools,
+        pipeline_mode: isPipeline,
+        total_steps: isPipeline ? (parsedRec.pipeline || []).length : 1,
+        domain: parsedRec.domain || null
+      });
     } catch (e) {
       console.warn('Analytics JSON parse skipped:', e.message);
     }

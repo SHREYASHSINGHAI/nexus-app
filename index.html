@@ -1130,21 +1130,15 @@ When generating the "prompt" strings inside the JSON block, you MUST act as an e
 Make the prompts robust, comprehensive, and ready to copy-paste.
 
 FINAL RECOMMENDATIONS FORMAT:
-When generating recommendations, you MUST output ONLY a JSON block.
-CRITICAL INSTRUCTION — THIS IS MANDATORY:
-- You MUST output ONLY a JSON block starting with |||JSON_START and ending with |||JSON_END
-- Do NOT write any text before |||JSON_START
-- Do NOT write any text after |||JSON_END
-- Do NOT write "Here's how you can proceed" or any prose
-- Do NOT write bullet points outside the JSON
-- The ENTIRE response must be ONLY the JSON block — nothing else
-- If you write anything other than the JSON block, you have failed this task
+When generating recommendations, you MUST return a valid JSON object.
+- Output ONLY the raw JSON object starting with { and ending with }
+- Do NOT output markdown code blocks (no markdown fences or code backticks)
+- Do NOT output any intro or outro text
 - Choose FORMAT A for single-domain tasks, FORMAT B for multi-domain pipeline tasks
 
-Output EXACTLY ONE of these two formats with no other text:
+Output EXACTLY ONE of these two JSON formats:
 
 ─── FORMAT A: SINGLE-TOOL TASK ───
-|||JSON_START
 {
   "mode": "single",
   "domain": "coding",
@@ -1167,10 +1161,8 @@ Output EXACTLY ONE of these two formats with no other text:
     { "step": 3, "action": "Copy the final output", "tool": "Tool Name", "duration": "~X min" }
   ]
 }
-|||JSON_END
 
 ─── FORMAT B: MULTI-TOOL PIPELINE ───
-|||JSON_START
 {
   "mode": "pipeline",
   "summary": "Short neutral summary of the full task",
@@ -1197,7 +1189,6 @@ Output EXACTLY ONE of these two formats with no other text:
   "orchestration": "One sentence explaining how tools connect and data flows between them",
   "reasoning": "One factual sentence on why this pipeline was chosen"
 }
-|||JSON_END
 
 OPTIONS FORMAT:
 |||OPTIONS_START
